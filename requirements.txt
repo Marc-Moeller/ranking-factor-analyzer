@@ -1,0 +1,18 @@
+# RankLens — Cora replacement engine
+# Python 3.11+ (tested on 3.13)
+pydantic>=2.6
+pydantic-settings>=2.2
+httpx>=0.27
+curl_cffi>=0.7
+beautifulsoup4>=4.12
+lxml>=5.2
+numpy>=1.26
+scipy>=1.12
+jinja2>=3.1
+python-dotenv>=1.0
+textstat>=0.7
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9   # required by FastAPI Form(...) on the login/signup endpoints
+psycopg[binary]>=3.1      # PostgreSQL driver (ships manylinux wheels — no compiler needed)
+psycopg-pool>=3.2         # connection pool; auto-reconnects if Postgres restarts

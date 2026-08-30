@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RankLens — {{ request.keyword }} · update comparison</title>
+<style>
+:root{
+  --bg:#0a0d14; --bg2:#0f131d; --card:#141a26; --card2:#1a2130;
+  --line:#232c3d; --line2:#2c3750;
+  --ink:#e8edf6; --muted:#8a96ab; --faint:#5b6678;
+  --accent:#6366f1; --accent2:#818cf8; --accent-soft:rgba(99,102,241,.14);
+  --cyan:#22d3ee;
+  --green:#34d399; --green-soft:rgba(52,211,153,.13); --green-line:rgba(52,211,153,.3);
+  --red:#f87171; --red-soft:rgba(248,113,113,.12); --red-line:rgba(248,113,113,.3);
+  --amber:#fbbf24;
+  --radius:16px; --radius-sm:10px;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 18px 40px -24px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:
+    radial-gradient(1100px 600px at 78% -10%,rgba(99,102,241,.13),transparent 60%),
+    radial-gradient(900px 500px at 5% 0%,rgba(34,211,238,.07),transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  font-size:15px;line-height:1.6;letter-spacing:.1px;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1140px;margin:0 auto;padding:48px 26px 80px}
+a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
+h1,h2,h3{line-height:1.2;margin:0;font-weight:650;letter-spacing:-.02em}
+.muted{color:var(--muted)}.faint{color:var(--faint)}
+
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:30px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 8px 22px -8px rgba(99,102,241,.7)}
+.brand .logo svg{width:19px;height:19px}
+.brand b{font-size:16px;font-weight:700}
+.brand .tag{font-size:11px;color:var(--faint);letter-spacing:.16em;text-transform:uppercase;margin-left:2px}
+
+.hero-head{margin-bottom:30px}
+.kw-label{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);font-weight:600;margin-bottom:8px}
+.kw{font-size:clamp(28px,4.6vw,42px);font-weight:740;letter-spacing:-.03em;line-height:1.05}
+.window{display:inline-flex;align-items:center;gap:12px;margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13px}
+.window .d{font-weight:600;color:var(--ink)}
+.window .arr{color:var(--accent2);font-size:15px}
+.window .lbl{color:var(--faint);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.update-name{margin-top:10px;font-size:13.5px;color:var(--muted)}
+.update-name b{color:var(--cyan);font-weight:600}
+
+.card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin-top:22px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.card-h .ic{width:30px;height:30px;border-radius:8px;flex:none;background:var(--accent-soft);color:var(--accent2);display:flex;align-items:center;justify-content:center}
+.card-h .ic svg{width:16px;height:16px}
+.card-h h2{font-size:17px}
+.card-h .sub{font-size:12.5px;color:var(--faint);margin-left:auto}
+
+/* ---- #1 flip callout ---- */
+.flip{
+  display:flex;align-items:center;justify-content:center;gap:clamp(14px,4vw,46px);
+  padding:30px 24px;margin-top:22px;border-radius:var(--radius);
+  border:1px solid var(--line2);
+  background:linear-gradient(180deg,rgba(99,102,241,.1),transparent),linear-gradient(180deg,var(--card),var(--bg2));
+  box-shadow:var(--shadow);text-align:center;flex-wrap:wrap;
+}
+.flip .side{min-width:0}
+.flip .role{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.flip .dom{font-size:clamp(18px,3vw,26px);font-weight:720;letter-spacing:-.02em;word-break:break-word}
+.flip .before .dom{color:var(--muted)}
+.flip .after .dom{color:#fff}
+.flip .mid{display:flex;flex-direction:column;align-items:center;gap:6px}
+.flip .mid .ar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent2);border:1px solid rgba(99,102,241,.4)}
+.flip .mid .ar svg{width:22px;height:22px}
+.flip .mid .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--accent2)}
+.flip.held{border-color:var(--green-line)}
+.flip.held .mid .ar{background:var(--green-soft);color:var(--green);border-color:var(--green-line)}
+.flip.held .mid .t{color:var(--green)}
+.flip.held .dom{color:#fff}
+
+/* ---- win/lose columns ---- */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}
+@media(max-width:760px){.cols{grid-template-columns:1fr}}
+.col{border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.col.win{border-color:var(--green-line);background:linear-gradient(180deg,var(--green-soft),transparent 22%),var(--bg2)}
+.col.lose{border-color:var(--red-line);background:linear-gradient(180deg,var(--red-soft),transparent 22%),var(--bg2)}
+.col-h{display:flex;align-items:center;gap:9px;padding:18px 22px 14px;font-size:14px;font-weight:700;letter-spacing:.02em}
+.col.win .col-h{color:var(--green)}
+.col.lose .col-h{color:var(--red)}
+.col-h .ct{margin-left:auto;font-size:12px;color:var(--faint);font-weight:500}
+.mv{display:flex;align-items:center;gap:12px;padding:12px 22px;border-top:1px solid var(--line)}
+.mv .dom{font-weight:600;font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mv .move{font-size:12px;font-family:ui-monospace,monospace;white-space:nowrap}
+.mv .extra{font-size:11px;color:var(--faint);display:flex;gap:9px;white-space:nowrap}
+.mv .extra .up{color:var(--green)}.mv .extra .dn{color:var(--red)}
+.delta{display:inline-flex;align-items:center;gap:3px;font-weight:700}
+.delta.up{color:var(--green)}.delta.dn{color:var(--red)}.delta.flat{color:var(--faint)}
+.empty{padding:16px 22px;color:var(--faint);font-size:13px;border-top:1px solid var(--line)}
+
+/* ---- movement table ---- */
+.tbl-wrap{overflow-x:auto;margin:0 -6px;border-radius:var(--radius-sm)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+thead th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:rgba(99,102,241,.05)}
+tbody tr:last-child td{border-bottom:none}
+.dom-c{font-weight:600}
+.rk{font-family:ui-monospace,monospace;color:var(--muted)}
+.spill{font-size:10.5px;font-weight:600;letter-spacing:.04em;padding:2px 9px;border-radius:999px;border:1px solid transparent;text-transform:capitalize}
+.spill.entered{background:var(--green-soft);color:var(--green);border-color:var(--green-line)}
+.spill.up{background:var(--green-soft);color:var(--green);border-color:var(--green-line)}
+.spill.dropped{background:var(--red-soft);color:var(--red);border-color:var(--red-line)}
+.spill.down{background:var(--red-soft);color:var(--red);border-color:var(--red-line)}
+.spill.same{background:#1c2433;color:var(--muted);border-color:var(--line2)}
+.mega{font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent2);border:1px solid rgba(99,102,241,.35);text-transform:uppercase}
+
+/* ---- macro lens ---- */
+.macro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.mstat{background:var(--card2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px}
+.mstat .n{font-size:26px;font-weight:730;letter-spacing:-.02em}
+.mstat .n.up{color:var(--green)}.mstat .n.dn{color:var(--red)}
+.mstat .l{font-size:11.5px;color:var(--muted);margin-top:3px;text-transform:capitalize}
+.macro-note{margin-top:16px;font-size:12.5px;color:var(--faint);line-height:1.6;border-left:2px solid var(--line2);padding-left:14px}
+
+/* ---- AI narrative ---- */
+.ai-card{border-color:var(--line2);background:linear-gradient(180deg,rgba(99,102,241,.07),transparent 30%),linear-gradient(180deg,var(--card),var(--bg2))}
+.prose{color:#d6deea;font-size:14.5px}
+.prose h2{font-size:16px;margin:22px 0 9px;color:#fff}.prose h2:first-child{margin-top:0}
+.prose h3{font-size:14px;margin:16px 0 7px;color:#eef2f9}
+.prose p{margin:0 0 12px}
+.prose strong{color:#fff;font-weight:650}
+.prose em{color:var(--accent2);font-style:normal}
+.prose code{background:#0c1018;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--cyan)}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:5px 0}
+.prose ol li::marker{color:var(--accent2);font-weight:700}.prose ul li::marker{color:var(--accent2)}
+
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--muted)}
+.chip b{color:var(--ink);font-weight:600}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+.foot{margin-top:34px;padding:22px 26px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg2);color:var(--muted);font-size:12.5px;line-height:1.7}
+.foot b{color:var(--ink)}
+.sig{margin-top:26px;text-align:center;color:var(--faint);font-size:11.5px;letter-spacing:.04em}
+
+/* =====================================================================
+   LIGHT THEME = DEFAULT (dark opt-in via <html data-theme="dark">).
+   Mirrors report.html.j2. Compare has no toggle, so it renders light.
+   ===================================================================== */
+html:not([data-theme="dark"]){
+  --bg:#f6f7fb; --bg2:#eef1f7; --card:#ffffff; --card2:#f3f5fa;
+  --line:#e4e8f0; --line2:#d2d9e6;
+  --ink:#1b2434; --muted:#5a6577; --faint:#8893a6;
+  --accent:#5d5cf0; --accent2:#5654d6; --accent-soft:rgba(99,102,241,.12);
+  --cyan:#0c91ad;
+  --green:#0f9d65; --green-soft:rgba(16,169,101,.12); --green-line:rgba(16,169,101,.3);
+  --red:#dc3552; --red-soft:rgba(220,53,82,.10); --red-line:rgba(220,53,82,.3);
+  --amber:#b7791f;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 14px 30px -20px rgba(16,24,40,.22);
+}
+html:not([data-theme="dark"]) .flip .after .dom,
+html:not([data-theme="dark"]) .flip.held .dom{color:var(--ink)!important}
+html:not([data-theme="dark"]) .spill.same{background:var(--card2)!important;color:var(--muted)!important}
+html:not([data-theme="dark"]) .prose{color:#33405a!important}
+html:not([data-theme="dark"]) .prose h2,html:not([data-theme="dark"]) .prose strong{color:var(--ink)!important}
+html:not([data-theme="dark"]) .prose h3{color:#26324a!important}
+html:not([data-theme="dark"]) .prose code{background:#eef1f8!important;color:#0c7d96!important;border-color:var(--line)!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 5-7"/></svg></span>
+    <b>RankLens</b><span class="tag">algorithm update comparison</span>
+  </div>
+
+  <div class="hero-head">
+    <div class="kw-label">SERP movement for</div>
+    <div class="kw">{{ request.keyword }}</div>
+    {% if request.update_name %}<div class="update-name">Update window: <b>{{ request.update_name }}</b></div>{% endif %}
+    <div class="window">
+      <span class="lbl">Before</span><span class="d">{{ report.before_date or '—' }}</span>
+      <span class="arr">→</span>
+      <span class="lbl">After</span><span class="d">{{ report.after_date or '—' }}</span>
+    </div>
+    <div class="meta-row">
+      <span class="chip"><b>{{ request.country|upper }}</b> · {{ request.language|upper }}</span>
+      <span class="chip">top-<b>{{ request.depth }}</b></span>
+      <span class="chip">churn <b>{{ '%.0f'|format(report.churn_pct) }}%</b></span>
+      <span class="chip muted">{{ report.generated_at.strftime('%b %d, %Y · %H:%M UTC') }}</span>
+    </div>
+  </div>
+
+  {% if report.n1_flip %}
+  <div class="flip">
+    <div class="side before"><div class="role">#1 before</div><div class="dom">{{ report.n1_before or '—' }}</div></div>
+    <div class="mid">
+      <span class="ar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+      <span class="t">#1 flipped</span>
+    </div>
+    <div class="side after"><div class="role">#1 after</div><div class="dom">{{ report.n1_after or '—' }}</div></div>
+  </div>
+  {% else %}
+  <div class="flip held">
+    <div class="mid">
+      <span class="ar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+      <span class="t">#1 held</span>
+    </div>
+    <div class="side after"><div class="role">still ranking #1</div><div class="dom">{{ report.n1_after or report.n1_before or '—' }}</div></div>
+  </div>
+  {% endif %}
+
+  {% macro movecells(m) %}
+    {% if m.before_rank is none and m.after_rank is not none %}
+      <span class="move"><span class="delta up">▲ entered #{{ m.after_rank }}</span></span>
+    {% elif m.after_rank is none and m.before_rank is not none %}
+      <span class="move"><span class="delta dn">▼ dropped out</span> <span class="faint">(was #{{ m.before_rank }})</span></span>
+    {% elif m.delta is not none and m.delta > 0 %}
+      <span class="move">#{{ m.before_rank }} → #{{ m.after_rank }} <span class="delta up">▲{{ m.delta }}</span></span>
+    {% elif m.delta is not none and m.delta < 0 %}
+      <span class="move">#{{ m.before_rank }} → #{{ m.after_rank }} <span class="delta dn">▼{{ -m.delta }}</span></span>
+    {% else %}
+      <span class="move">#{{ m.after_rank }} <span class="delta flat">— held</span></span>
+    {% endif %}
+  {% endmacro %}
+
+  {% macro extras(m) %}
+    {% if m.authority_score is not none or m.traffic_trend_pct is not none %}
+      <span class="extra">
+        {% if m.authority_score is not none %}<span>AS {{ '%.0f'|format(m.authority_score) }}</span>{% endif %}
+        {% if m.traffic_trend_pct is not none %}<span class="{{ 'up' if m.traffic_trend_pct >= 0 else 'dn' }}">{{ '%+.0f'|format(m.traffic_trend_pct) }}% traffic</span>{% endif %}
+      </span>
+    {% endif %}
+  {% endmacro %}
+
+  <div class="cols">
+    <div class="col win">
+      <div class="col-h"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l5-5 4 3 5-7"/><path d="M16 8h5v5"/></svg> Winners <span class="ct">{{ winners|length }}</span></div>
+      {% for m in winners %}
+      <div class="mv"><span class="dom">{{ m.domain }}</span>{{ movecells(m) }}{{ extras(m) }}</div>
+      {% else %}
+      <div class="empty">No clear winners in this window.</div>
+      {% endfor %}
+    </div>
+    <div class="col lose">
+      <div class="col-h"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l5 5 4-3 5 7"/><path d="M16 16h5v-5"/></svg> Losers <span class="ct">{{ losers|length }}</span></div>
+      {% for m in losers %}
+      <div class="mv"><span class="dom">{{ m.domain }}</span>{{ movecells(m) }}{{ extras(m) }}</div>
+      {% else %}
+      <div class="empty">No clear losers in this window.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if moves %}
+  <div class="card">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg></span>
+      <h2>Full movement table</h2>
+      <span class="sub">{{ moves|length }} domains tracked</span>
+    </div>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Domain</th><th>Before</th><th>After</th><th>Status</th><th>Δ</th><th></th></tr></thead>
+      <tbody>
+      {% for m in moves %}
+        <tr>
+          <td class="dom-c">{{ m.domain }}</td>
+          <td class="rk">{{ ('#' ~ m.before_rank) if m.before_rank is not none else '—' }}</td>
+          <td class="rk">{{ ('#' ~ m.after_rank) if m.after_rank is not none else '—' }}</td>
+          <td><span class="spill {{ m.status.value if m.status.value is defined else m.status }}">{{ m.status.value if m.status.value is defined else m.status }}</span></td>
+          <td>
+            {% if m.delta is not none and m.delta > 0 %}<span class="delta up">▲{{ m.delta }}</span>
+            {% elif m.delta is not none and m.delta < 0 %}<span class="delta dn">▼{{ -m.delta }}</span>
+            {% else %}<span class="delta flat">—</span>{% endif %}
+          </td>
+          <td>{% if m.is_mega %}<span class="mega">mega</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if macro %}
+  <div class="card">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20"/></svg></span>
+      <h2>Macro lens · mega-platforms</h2>
+      <span class="sub">brand &amp; UGC giants</span>
+    </div>
+    <div class="macro-grid">
+      {% for k, v in macro.items() %}
+        {% set key = k|string %}
+        {% set lk = key|lower %}
+        {% if v is number %}
+        <div class="mstat">
+          <div class="n {{ 'up' if ('enter' in lk or 'up' in lk or 'win' in lk) else ('dn' if ('drop' in lk or 'down' in lk or 'lose' in lk or 'lost' in lk) else '') }}">{{ v }}</div>
+          <div class="l">{{ key|replace('_',' ') }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% set note = macro.get('note') if macro.get is defined else none %}
+    <div class="macro-note">
+      {% if note %}{{ note }}{% else %}
+      Mega-platforms (Reddit, YouTube, Wikipedia, Amazon and similar) rank largely on brand strength and user-generated breadth, not on-page tuning you can copy. This lens is <b>context only</b> — it shows the macro tilt of the SERP, not a tactic a normal site can replicate.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if ai_html %}
+  <div class="card ai-card">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></span>
+      <h2>AI analysis</h2>
+      <span class="sub">per-query satisfaction frame</span>
+    </div>
+    <div class="prose">{{ ai_html|safe }}</div>
+  </div>
+  {% endif %}
+
+  <div class="foot">
+    <b>Caveats.</b>
+    This compares two dated SERP snapshots for a single national query — Google rolls updates gradually, so <b>snapshot cadence</b> can blur exact before/after lines.
+    Authority and traffic figures are <b>third-party estimates</b> (soft proxies), useful for direction, not ground truth.
+    Movement here is one keyword's top-{{ request.depth }}; broaden to a keyword set before drawing portfolio-wide conclusions. A core update re-decides, <b>per query</b>, which result best satisfies users — read the winners and losers as evidence of that re-rating, not as a fixed ranking formula.
+  </div>
+
+  <div class="sig">Generated by RankLens · a transparent, modern alternative to legacy Cora exports</div>
+
+</div>
+</body>
+</html>

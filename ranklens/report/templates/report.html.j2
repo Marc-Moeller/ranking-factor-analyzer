@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RankLens — {{ request.keyword }}</title>
+<script>document.documentElement.className=document.documentElement.className.replace('no-js','js');try{if(localStorage.getItem('rl-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070a11; --bg2:#0c0f18; --card:#11151f; --card2:#171c28;
+  --line:#222a3a; --line2:#2c3650;
+  --ink:#eaeff8; --muted:#8c98ad; --faint:#5d6883;
+  --accent:#6d6cf2; --accent2:#9aa2ff; --accent-soft:rgba(109,108,242,.15);
+  --cyan:#2fd4ee;
+  --green:#3ddc97; --green-soft:rgba(61,220,151,.14);
+  --red:#fb7185; --red-soft:rgba(251,113,133,.14);
+  --amber:#fbbf24;
+  --radius:18px; --radius-sm:11px;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 24px 60px -32px rgba(0,0,0,.85);
+  --shadow-lift:0 1px 0 rgba(255,255,255,.05) inset, 0 32px 70px -28px rgba(0,0,0,.9), 0 0 0 1px rgba(109,108,242,.12);
+  --font-display:"Bricolage Grotesque","Hanken Grotesk","Segoe UI",system-ui,sans-serif;
+  --font-body:"Hanken Grotesk","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --font-mono:"JetBrains Mono","SFMono-Regular",ui-monospace,"Cascadia Code","Consolas",monospace;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:78px}
+body{
+  margin:0;background:
+    radial-gradient(1200px 680px at 82% -12%,rgba(109,108,242,.16),transparent 58%),
+    radial-gradient(1000px 560px at -5% 2%,rgba(47,212,238,.09),transparent 54%),
+    radial-gradient(900px 700px at 50% 120%,rgba(61,220,151,.05),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px;line-height:1.62;letter-spacing:.05px;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+/* film grain overlay for depth */
+body::before{content:"";position:fixed;inset:0;background-image:var(--grain);background-size:180px;
+  opacity:.025;pointer-events:none;z-index:1;mix-blend-mode:overlay}
+.wrap{max-width:1160px;margin:0 auto;padding:30px 26px 90px;position:relative;z-index:2}
+a{color:var(--accent2);text-decoration:none;transition:color .15s var(--ease)}
+a:hover{color:#fff}
+h1,h2,h3{line-height:1.12;margin:0;font-family:var(--font-display);font-weight:700;letter-spacing:-.02em}
+.muted{color:var(--muted)}
+.faint{color:var(--faint)}
+.mono{font-family:var(--font-mono)}
+::selection{background:rgba(109,108,242,.35);color:#fff}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#262f43;border:3px solid var(--bg);border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:#34405c}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-radius:6px}
+
+/* ---- sticky topbar + reading progress ---- */
+.topbar{position:sticky;top:0;z-index:40;backdrop-filter:saturate(140%) blur(14px);
+  background:rgba(8,11,18,.72);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1160px;margin:0 auto;padding:11px 26px;display:flex;align-items:center;gap:18px}
+.tb-brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:14px;letter-spacing:-.01em;flex:none}
+.tb-brand .logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--cyan));
+  display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -6px rgba(109,108,242,.8)}
+.tb-brand .logo svg{width:14px;height:14px}
+.tb-nav{display:flex;gap:3px;flex-wrap:wrap;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{color:var(--muted);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:8px;white-space:nowrap;
+  transition:color .15s var(--ease),background .15s var(--ease)}
+.tb-nav a:hover{color:var(--ink);background:rgba(255,255,255,.04)}
+.tb-nav a.active{color:#fff;background:var(--accent-soft);box-shadow:inset 0 0 0 1px rgba(154,162,255,.25)}
+.tb-progress{height:2px;background:transparent;position:relative}
+.tb-progress i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--accent),var(--cyan));
+  box-shadow:0 0 10px rgba(47,212,238,.6)}
+@media(max-width:620px){.tb-brand .tx{display:none}}
+
+/* ---- header ---- */
+.brand{display:flex;align-items:center;gap:12px;margin:8px 0 30px}
+.brand .logo{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),var(--cyan));
+  display:flex;align-items:center;justify-content:center;flex:none;
+  box-shadow:0 10px 26px -8px rgba(109,108,242,.75);
+}
+.brand .logo svg{width:21px;height:21px}
+.brand b{font-size:17px;font-weight:700;letter-spacing:-.02em;font-family:var(--font-display)}
+.brand .tag{font-size:10.5px;color:var(--faint);letter-spacing:.18em;text-transform:uppercase;margin-left:3px}
+
+.hero-head{margin-bottom:36px}
+.kw-label{font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent2);font-weight:600;margin-bottom:12px}
+.kw{font-family:var(--font-display);font-size:clamp(34px,6vw,62px);font-weight:800;letter-spacing:-.035em;line-height:1.02;
+  background:linear-gradient(180deg,#fff,#c7cfe2);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.kw::after{content:"";display:block;width:64px;height:4px;margin-top:18px;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent),var(--cyan))}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:6px 13px;font-size:12.5px;color:var(--muted);transition:border-color .15s var(--ease)}
+.chip:hover{border-color:var(--line2)}
+.chip b{color:var(--ink);font-weight:600}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent2)}
+
+/* ---- card ---- */
+.card{
+  position:relative;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent 22%),
+    linear-gradient(180deg,var(--card),var(--bg2));
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:28px 30px;margin-top:22px;
+  transition:box-shadow .4s var(--ease),border-color .4s var(--ease),transform .4s var(--ease);
+}
+/* hairline highlight along the top edge */
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;border-radius:var(--radius) var(--radius) 0 0;
+  background:linear-gradient(90deg,transparent,rgba(154,162,255,.4),transparent);opacity:.6}
+.card:hover{border-color:var(--line2);box-shadow:var(--shadow-lift)}
+.card-h{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.card-h .ic{
+  width:32px;height:32px;border-radius:9px;flex:none;
+  background:linear-gradient(160deg,var(--accent-soft),rgba(47,212,238,.08));
+  color:var(--accent2);border:1px solid rgba(154,162,255,.18);
+  display:flex;align-items:center;justify-content:center;
+}
+.card-h .ic svg{width:16px;height:16px}
+.card-h h2{font-size:19px;font-weight:700;letter-spacing:-.025em}
+.card-h .sub{font-size:12px;color:var(--faint);margin-left:auto;letter-spacing:.02em}
+@media(max-width:560px){.card{padding:22px 18px}.card-h .sub{display:none}}
+
+/* ---- hero scorecard ---- */
+.scorecard{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:center}
+@media(max-width:680px){.scorecard{grid-template-columns:1fr;text-align:center;justify-items:center}}
+.gauge{position:relative;width:172px;height:172px;flex:none}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .val{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.gauge .num{font-family:var(--font-display);font-size:50px;font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.gauge .den{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-top:6px}
+.gauge svg circle:last-of-type{transition:stroke-dashoffset 1.5s var(--ease)}
+.stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%}
+@media(max-width:680px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:linear-gradient(180deg,var(--card2),rgba(23,28,40,.5));border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:15px 17px;transition:border-color .2s var(--ease),transform .2s var(--ease)}
+.stat:hover{border-color:var(--line2);transform:translateY(-2px)}
+.stat .n{font-family:var(--font-display);font-size:27px;font-weight:780;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.stat .l{font-size:11.5px;color:var(--muted);margin-top:3px;letter-spacing:.01em}
+.stat.tgt{grid-column:1/-1}
+.stat.tgt .n{font-size:14px;font-weight:600;word-break:break-all}
+.stat.tgt .url{color:var(--accent2)}
+/* compact stat row — sleeker chips for the off-page panel */
+.stat-grid.compact{grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:7px}
+.stat-grid.compact .stat{padding:8px 12px;border-radius:9px;background:var(--card2);border-color:var(--line)}
+.stat-grid.compact .stat:hover{transform:none;border-color:var(--line2)}
+.stat-grid.compact .stat .n{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.stat-grid.compact .stat .n .faint{font-size:10.5px!important;font-weight:500;margin-left:1px}
+.stat-grid.compact .stat .l{font-size:9.5px;margin-top:1px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+.stat-grid.compact .stat.tgt{grid-column:auto}
+.stat-grid.compact .stat.tgt .n{font-size:17px;font-weight:780;color:var(--accent2)}
+@media(max-width:680px){.stat-grid.compact{grid-template-columns:repeat(3,1fr)}}
+.rankpill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent2);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;margin-top:6px}
+
+/* ---- ranking funnel + competitor verdicts + semantic coverage ---- */
+.funnel-callout{display:flex;align-items:center;gap:16px;padding:16px 18px;margin-bottom:14px;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--accent-soft),rgba(47,212,238,.06));border:1px solid rgba(154,162,255,.28)}
+.funnel-callout .overall{font-family:var(--font-display);font-size:30px;font-weight:800;color:#fff;line-height:1;white-space:nowrap}
+.funnel-callout .overall small{font-family:var(--font-body);font-size:11px;color:var(--faint);font-weight:600}
+.funnel-callout .summary{font-size:14px;font-weight:600;color:var(--ink)}
+.gate-row{display:grid;grid-template-columns:minmax(150px,1.15fr) minmax(180px,2fr) auto auto;gap:12px;align-items:center;
+  padding:13px 2px;border-bottom:1px solid var(--line)}
+.gate-row:last-child{border-bottom:none}.gate-name{font-weight:650;color:var(--ink)}
+.gate-score{display:flex;align-items:center;gap:9px}.gate-track{height:9px;flex:1;background:#0b0f17;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.gate-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--cyan))}.gate-num{width:34px;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.verdict,.tier{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border:1px solid transparent}
+.verdict.pass{color:var(--green);background:var(--green-soft);border-color:rgba(61,220,151,.28)}
+.verdict.weak{color:var(--amber);background:rgba(251,191,36,.13);border-color:rgba(251,191,36,.28)}
+.verdict.fail{color:var(--red);background:var(--red-soft);border-color:rgba(251,113,133,.28)}
+.verdict.na{color:var(--muted);background:rgba(140,152,173,.12);border-color:var(--line2)}
+.tier{color:var(--accent2);background:var(--accent-soft);border-color:rgba(154,162,255,.25)}
+.tier.measured{color:var(--green);background:var(--green-soft);border-color:rgba(61,220,151,.25)}
+.tier.estimated{color:var(--amber);background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.28)}
+.gate-details{grid-column:2/-1;margin:-5px 0 0;padding-left:17px;color:var(--faint);font-size:11.5px}.gate-details li{margin:2px 0}
+.competitor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.competitor-card{background:var(--card2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:17px}
+.competitor-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.competitor-head .domain{font-weight:700;word-break:break-word}
+.reason{padding:9px 0;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink)}.reason:first-of-type{border-top:none}
+.reason-evidence{display:block;margin-top:3px;color:var(--faint);font-family:var(--font-mono);font-size:10.5px}
+.semantic-scroll{overflow-x:auto;border-radius:var(--radius-sm)}#sec-semantic table{min-width:680px}
+#sec-semantic th.cover-you,#sec-semantic td.cover-you{box-shadow:inset 3px 0 0 var(--accent);font-weight:750}
+.heat-cell{text-align:center;font-family:var(--font-mono);font-size:11px;font-weight:750;color:#08100d;min-width:58px}
+.opportunity{margin-top:17px;padding:14px 16px;border:1px solid rgba(61,220,151,.25);background:var(--green-soft);border-radius:var(--radius-sm)}
+.opportunity h3{font-size:13px;color:var(--green);margin-bottom:7px}.opportunity ul{margin:0;padding-left:19px;font-size:12.5px}
+.best-passage{margin:17px 0 0;padding:14px 17px;border-left:3px solid var(--cyan);background:rgba(47,212,238,.06);color:#d8e7ed;font-size:13px;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.semantic-meta{margin-top:12px;font-size:11.5px;color:var(--faint)}
+@media(max-width:760px){.gate-row{grid-template-columns:1fr auto auto}.gate-score{grid-column:1/-1;grid-row:2}.gate-details{grid-column:1/-1}.funnel-callout{align-items:flex-start}.competitor-grid{grid-template-columns:1fr}}
+
+/* ---- AI narrative ---- */
+.ai-card{border-color:var(--line2);background:
+  linear-gradient(180deg,rgba(99,102,241,.07),transparent 30%),
+  linear-gradient(180deg,var(--card),var(--bg2));}
+.prose{color:#d6deea;font-size:14.5px}
+.prose h2{font-size:16px;margin:22px 0 9px;color:#fff;letter-spacing:-.01em}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:14px;margin:16px 0 7px;color:#eef2f9}
+.prose p{margin:0 0 12px}
+.prose strong{color:#fff;font-weight:650}
+.prose em{color:var(--accent2);font-style:normal}
+.prose code{background:#0c1018;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--cyan)}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:5px 0}
+.prose ol li::marker{color:var(--accent2);font-weight:700}
+.prose ul li::marker{color:var(--accent2)}
+
+/* ---- roadmap ---- */
+.phase{margin-top:24px}
+.phase:first-child{margin-top:6px}
+.phase-h{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.phase-h .nm{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2)}
+.phase-h .ln{flex:1;height:1px;background:var(--line)}
+.phase-h .ct{font-size:11.5px;color:var(--faint)}
+.rec{
+  display:grid;grid-template-columns:1fr 230px;gap:18px;align-items:center;
+  background:var(--card2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:14px 16px;margin-bottom:8px;
+}
+@media(max-width:680px){.rec{grid-template-columns:1fr}}
+.rec .nm{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rec .act{font-size:12.5px;color:var(--muted);margin-top:3px}
+.pill{font-size:10.5px;font-weight:600;letter-spacing:.04em;padding:2px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill.easy{background:var(--green-soft);color:var(--green);border-color:rgba(52,211,153,.25)}
+.pill.diff{background:var(--amber);color:#1a1408;background:rgba(251,191,36,.16);color:var(--amber);border-color:rgba(251,191,36,.3)}
+.pill.cat{background:#1c2433;color:var(--muted);border-color:var(--line2)}
+.pill.t200{background:var(--accent-soft);color:var(--accent2);border-color:rgba(99,102,241,.35)}
+.chipr{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;font-family:ui-monospace,monospace}
+.chipr.pos{background:var(--green-soft);color:var(--green)}
+.chipr.neg{background:var(--red-soft);color:var(--red)}
+/* deficit bar */
+.dbar{}
+.dbar .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-bottom:5px}
+.dbar .lab b{color:var(--ink);font-weight:600}
+.track{height:8px;border-radius:5px;background:#0b0f17;border:1px solid var(--line);overflow:hidden;position:relative}
+.track .cur{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:5px}
+.track .goal{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+
+/* ---- table ---- */
+.tbl-wrap{overflow-x:auto;margin:0 -6px;border-radius:var(--radius-sm)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+thead th{
+  text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line2);
+  white-space:nowrap;position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none;
+}
+thead th.no-sort{cursor:default}
+thead th .ar{opacity:.35;font-size:9px;margin-left:3px}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:rgba(99,102,241,.05)}
+tbody tr:last-child td{border-bottom:none}
+.brand-h{margin-top:18px;margin-bottom:2px;font-size:12.5px;font-weight:700;letter-spacing:.01em;color:var(--ink)}
+.brand-h .sub2{font-weight:500;color:var(--muted)}
+.brand-tot td{border-top:2px solid var(--line2);font-weight:740;color:var(--ink);background:rgba(109,108,242,.06)}
+.brand-you{background:var(--accent-soft)!important}
+.brand-you:hover{background:rgba(109,108,242,.22)!important}
+.brand-you td{border-color:rgba(109,108,242,.3)}
+.brand-yb{display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:800;letter-spacing:.05em;padding:1px 7px;border-radius:6px;margin-right:8px;vertical-align:middle}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:12px}
+.fname{font-weight:600;color:var(--ink)}
+.grp{font-size:11.5px;color:var(--faint)}
+.sbar{display:flex;align-items:center;gap:9px;min-width:150px}
+.sbar .t{flex:1;height:7px;border-radius:5px;background:#0b0f17;border:1px solid var(--line);overflow:hidden}
+.sbar .f{height:100%;border-radius:5px}
+.sbar .f.pos{background:linear-gradient(90deg,#10b981,var(--green))}
+.sbar .f.neg{background:linear-gradient(90deg,#dc2626,var(--red))}
+.sbar .f.mut{background:#39435a}
+.sbar .v{font-family:ui-monospace,monospace;font-size:12px;width:48px;text-align:right;color:var(--muted)}
+.sbar .v.pos{color:var(--green)}
+.sbar .v.neg{color:var(--red)}
+.ok{color:var(--green);font-weight:700}
+.dim{color:var(--faint)}
+
+/* ---- correlation toolbar: group filter + hide + next ---- */
+#corrTable{min-width:760px}
+.corr-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 2px 6px}
+.fgroups{display:flex;flex-wrap:wrap;gap:6px}
+.fpill{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line2);
+  color:var(--muted);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:.12s;white-space:nowrap}
+.fpill .gdot{width:7px;height:7px;border-radius:50%;background:var(--gc,var(--accent));flex:none}
+.fpill:hover{border-color:var(--gc,var(--accent));color:var(--ink)}
+.fpill.active{background:color-mix(in srgb,var(--gc,var(--accent)) 18%,transparent);
+  border-color:var(--gc,var(--accent));color:var(--ink)}
+.corr-bar-right{display:flex;align-items:center;gap:14px;margin-left:auto}
+.toggle{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.nextg{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);
+  color:var(--accent2);border-radius:8px;padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:.12s;white-space:nowrap}
+.nextg:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.corr-count{font-size:12px;color:var(--faint);white-space:nowrap}
+.corr-legend{display:flex;flex-wrap:wrap;gap:16px;padding:2px 2px 12px;font-size:11.5px;color:var(--faint)}
+.corr-legend i.lg{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.corr-legend i.lg.under{background:var(--amber)}
+.corr-legend i.lg.over{background:var(--red)}
+.corr-legend i.lg.met{background:var(--green)}
+
+/* ---- group pills (color-coded by --gc) ---- */
+.gpill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:600;letter-spacing:.02em;white-space:nowrap;
+  background:color-mix(in srgb,var(--gc) 15%,transparent);color:var(--gc);
+  border:1px solid color-mix(in srgb,var(--gc) 32%,transparent)}
+.gpill .gdot{width:6px;height:6px;border-radius:50%;background:var(--gc);flex:none}
+
+/* ---- status pills (vs page-1 norm) ---- */
+.statp{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:7px;
+  font-size:11.5px;font-weight:650;white-space:nowrap}
+.statp .d{font-family:ui-monospace,monospace;font-size:10.5px;font-weight:600;opacity:.85}
+.statp.under{background:rgba(251,191,36,.14);color:var(--amber)}
+.statp.over{background:var(--red-soft);color:var(--red)}
+.statp.met{background:var(--green-soft);color:var(--green)}
+.statp.off{background:rgba(138,150,171,.16);color:var(--muted)}
+.youcell.under{color:var(--amber)}
+.youcell.over{color:var(--red)}
+.youcell.met{color:var(--green)}
+
+/* ---- backlink filter ---- */
+.bl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px}
+.bl-cap{font-size:12.5px;color:var(--faint);font-weight:600;letter-spacing:.02em}
+.bl-flab{font-size:12px;color:var(--muted);margin-left:auto}
+.bl-filter{background:var(--card2);border:1px solid var(--line2);color:var(--ink);border-radius:8px;padding:7px 11px;font-size:12.5px;font-family:inherit;cursor:pointer;max-width:340px}
+.bl-filter:focus{outline:none;border-color:var(--accent)}
+.bl-count{font-size:12px;color:var(--faint)}
+.bl-nav{display:flex;align-items:center;gap:6px;margin-left:auto}
+.bl-arrow{background:var(--card2);border:1px solid var(--line2);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer}
+.bl-arrow:hover{border-color:var(--accent);color:var(--accent)}
+.bl-page-lbl{font-size:12.5px;color:var(--muted)}
+.bl-page-lbl b{color:var(--ink);font-weight:680}
+/* color-coded ranking-page frame + leading domain banner */
+.bl-frame{margin-top:10px;border-radius:11px;border:1px solid var(--bl-line,var(--line));border-left:4px solid var(--bl-accent,var(--accent));background:var(--bl-soft,transparent);overflow:hidden;transition:border-color .25s var(--ease),background .25s var(--ease)}
+.bl-frame .tbl-wrap{margin:0;border-radius:0}
+.bl-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px;border-bottom:1px solid var(--bl-line,var(--line))}
+.bl-banner .dom{font-family:var(--font-display);font-size:18px;font-weight:760;letter-spacing:-.01em;color:var(--bl-accent,var(--accent))}
+.bl-banner .meta{font-size:11.5px;color:var(--faint);letter-spacing:.01em}
+.bl-banner .brand-yb{background:var(--bl-accent,var(--accent))}
+.bl-frame .bl-page td:first-child{border-left:3px solid var(--bl-accent,var(--accent))}
+
+/* ---- serp ---- */
+.serp-rank{display:inline-flex;width:24px;height:24px;border-radius:7px;background:var(--card2);border:1px solid var(--line2);align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
+.serp-rank.top{background:var(--accent-soft);color:var(--accent2);border-color:rgba(99,102,241,.4)}
+.serp-dom{font-weight:600}
+.serp-title{color:var(--muted);font-size:12.5px}
+.serp-url{font-size:11.5px;color:var(--faint)}
+
+/* ---- footer ---- */
+.foot{margin-top:34px;padding:22px 26px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg2);color:var(--muted);font-size:12.5px;line-height:1.7}
+.foot b{color:var(--ink)}
+.sig{margin-top:26px;text-align:center;color:var(--faint);font-size:11.5px;letter-spacing:.04em}
+
+/* ---- motion: orchestrated load + scroll reveal ---- */
+.js .reveal{opacity:0;transform:translateY(18px);
+  transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.js .reveal.in{opacity:1;transform:none}
+@keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.js .sbar .f,.js .track .cur,.js .tb-progress i{transform-origin:left center}
+
+/* refined sub-bar + roadmap track fills */
+.sbar .f{transition:width .9s var(--ease)}
+.track .cur{transition:width 1s var(--ease)}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .js .reveal{opacity:1;transform:none}
+}
+
+/* ---- print / PDF ---- */
+@media print{
+  html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body::before,.topbar{display:none!important}
+  .wrap{padding-top:18px}
+  .card{break-inside:avoid;page-break-inside:avoid}
+  .js .reveal{opacity:1!important;transform:none!important}
+}
+
+/* ---- topical entity map (sec-entities) ---- */
+#sec-entities .ent-summary{font-size:12.5px;color:var(--muted);margin-top:14px}
+#sec-entities .ent-heading{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent2);margin:26px 0 4px;display:flex;align-items:center;gap:9px}
+#sec-entities .ent-heading .ln{flex:1;height:1px;background:var(--line)}
+#sec-entities .ent-sub{font-size:12px;color:var(--faint);margin:0 0 12px}
+/* missing-entity chips */
+#sec-entities .ent-miss-lab{font-size:12px;font-weight:600;color:var(--red);margin:18px 0 9px;letter-spacing:.01em}
+#sec-entities .ent-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px}
+#sec-entities .ent-chip{display:inline-flex;align-items:center;gap:6px;background:var(--red-soft);
+  border:1px solid rgba(251,113,133,.32);color:#ffd3da;border-radius:999px;padding:5px 12px;
+  font-size:12.5px;font-weight:600;letter-spacing:.01em}
+#sec-entities .ent-chip .pl{color:var(--red);font-weight:700;font-family:var(--font-mono);font-size:13px;line-height:1}
+/* tables */
+#sec-entities .ent-scroll{overflow-x:auto;margin:0 -4px;border-radius:var(--radius-sm)}
+#sec-entities table{border-collapse:collapse;width:100%;font-size:12px;min-width:560px}
+#sec-entities thead th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;padding:6px 9px;border-bottom:1px solid var(--line2);white-space:nowrap}
+#sec-entities tbody td{padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:middle}
+#sec-entities tbody tr:last-child td{border-bottom:none}
+#sec-entities tbody tr:hover{background:rgba(99,102,241,.05)}
+#sec-entities .col-rank{text-align:center;width:34px}
+/* YOU column — first data column, accent-bordered so it can't be missed */
+#sec-entities .col-you{box-shadow:inset 3px 0 0 var(--accent);background:rgba(109,108,242,.05)}
+#sec-entities thead th.col-you{text-align:center;background:rgba(109,108,242,.07)}
+/* sticky first column for the wide matrices */
+#sec-entities .ecol{position:sticky;left:0;z-index:1;background:var(--card);max-width:240px}
+#sec-entities thead .ecol{background:var(--card);z-index:2}
+#sec-entities tbody tr:hover .ecol{background:#161b27}
+#sec-entities .ename{font-weight:600;color:var(--ink)}
+#sec-entities .eattr{font-family:var(--font-mono);font-size:11.5px;color:var(--cyan)}
+#sec-entities .etype{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--faint);background:var(--card2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 5px;vertical-align:middle}
+/* column headers for rank / YOU */
+#sec-entities .rh{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;
+  border-radius:6px;background:var(--card2);border:1px solid var(--line2);font-size:11px;font-weight:700;
+  color:var(--muted);font-variant-numeric:tabular-nums}
+#sec-entities .rh.you{background:var(--accent-soft);border-color:rgba(99,102,241,.45);color:var(--accent2);
+  font-size:9.5px;letter-spacing:.04em;padding:0 6px}
+/* presence dot / marks */
+#sec-entities .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green)}
+#sec-entities .absent{color:var(--faint);font-weight:700}
+#sec-entities .you-yes{color:var(--green);font-weight:800}
+#sec-entities .you-no{color:var(--red);font-weight:800}
+#sec-entities .cons{font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+/* gap row highlight */
+#sec-entities tr.gap-entity .ecol{box-shadow:inset 3px 0 0 var(--red)}
+/* View-B value cells */
+#sec-entities .vcell{color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sec-entities .consval{color:var(--ink);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sec-entities td.c-ok{background:var(--green-soft);color:var(--green);font-weight:600}
+#sec-entities td.c-warn{background:rgba(251,191,36,.14);color:var(--amber);font-weight:600}
+#sec-entities td.c-miss{background:var(--red-soft);color:var(--red);font-weight:600}
+#sec-entities td.youc{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sec-entities td.youc .off{font-size:9.5px;font-weight:700;opacity:.85;margin-left:4px}
+#sec-entities .ent-more{font-size:11.5px;color:var(--faint);padding:9px 9px 2px}
+/* EAV attribute filter bar + gap banner */
+#sec-entities .eav-bar{padding:6px 2px 4px}
+.no-js #sec-entities .eav-bar{display:none}
+#sec-entities .eav-bar .fpill .pn{font-family:var(--font-mono);font-size:10.5px;font-weight:700;color:var(--faint)}
+#sec-entities .eav-bar .fpill.active .pn{color:var(--muted)}
+#sec-entities .eav-bar .fpill .pgap{font-family:var(--font-mono);font-size:10px;font-weight:800;color:var(--red);
+  background:var(--red-soft);border-radius:5px;padding:0 4px;margin-left:1px}
+#sec-entities .eav-gap-banner{margin:8px 0 12px;padding:11px 13px;border-radius:var(--radius-sm);
+  border:1px solid var(--line2);background:var(--card2);font-size:12.5px;color:var(--muted)}
+.no-js #sec-entities .eav-gap-banner{display:none}
+#sec-entities .eav-gap-banner.has-gap{border-color:rgba(251,113,133,.32);background:var(--red-soft)}
+#sec-entities .eav-gap-banner.has-off{border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.08)}
+#sec-entities .eav-gap-banner.ok{border-color:rgba(52,211,153,.3);background:var(--green-soft)}
+#sec-entities .egb-attr{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--cyan)}
+#sec-entities .egb-meta{color:var(--faint);margin-left:8px;font-size:11.5px}
+#sec-entities .egb-row{margin-top:9px;display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+#sec-entities .egb-lab{font-weight:700;font-size:12px}
+#sec-entities .egb-lab.miss{color:var(--red)}
+#sec-entities .egb-lab.off,#sec-entities .egb-off{color:var(--amber);font-weight:700}
+#sec-entities .egb-lab.ok{color:var(--green)}
+#sec-entities .egb-off{margin-left:8px}
+/* legend */
+#sec-entities .ent-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;font-size:11px;color:var(--faint)}
+/* ---- writing brief (sec-brief) ---- */
+#sec-brief .ent-summary{font-size:12.5px;color:var(--muted);margin-top:6px}
+#sec-brief .brief-list{list-style:none;margin:0 0 6px;padding:0}
+#sec-brief .brief-list li{position:relative;padding:7px 0 7px 22px;font-size:13px;color:var(--ink);
+  border-bottom:1px solid var(--line)}
+#sec-brief .brief-list li:last-child{border-bottom:none}
+#sec-brief .brief-list li::before{content:"→";position:absolute;left:2px;color:var(--accent);font-weight:700}
+#sec-brief .brief-ev{display:inline-block;margin-left:8px;font-size:11px;color:var(--faint);
+  font-family:var(--font-mono)}
+#sec-brief .brief-prompt-wrap{position:relative;margin-top:4px}
+#sec-brief .brief-prompt{background:var(--card2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:38px 16px 14px;font-family:var(--font-mono);font-size:11.5px;line-height:1.55;color:var(--muted);
+  white-space:pre-wrap;word-break:break-word;max-height:340px;overflow-y:auto;margin:0}
+#sec-brief .brief-copy{position:absolute;top:8px;right:8px;z-index:1}
+#sec-brief .brief-copy.done{color:var(--green)}
+#sec-entities .ent-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+#sec-entities .ent-legend i.lg-ok{background:var(--green)}
+#sec-entities .ent-legend i.lg-warn{background:var(--amber)}
+#sec-entities .ent-legend i.lg-miss{background:var(--red)}
+
+/* ---- theme toggle button (topbar) ---- */
+.tb-theme{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin-left:6px;
+  border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;
+  transition:color .15s var(--ease),background .15s var(--ease),border-color .15s var(--ease)}
+.tb-theme:hover{color:var(--ink);border-color:var(--line2)}
+.tb-theme svg{width:16px;height:16px;display:block}
+.tb-theme .i-sun{display:none}
+html[data-theme="dark"] .tb-theme .i-sun{display:block}
+html[data-theme="dark"] .tb-theme .i-moon{display:none}
+
+/* =====================================================================
+   LIGHT THEME = DEFAULT. Dark mode is opt-in via <html data-theme="dark">.
+   Light-theme override; each rule is
+   scoped html:not([data-theme="dark"]) so it applies unless dark is chosen.
+   (When dark is active these selectors simply stop matching and the original
+   dark stylesheet above takes over — !important never leaks into dark mode.)
+   ===================================================================== */
+html:not([data-theme="dark"]){
+  --bg:#f6f7fb; --bg2:#eef1f7; --card:#ffffff; --card2:#f3f5fa;
+  --line:#e4e8f0; --line2:#d2d9e6;
+  --ink:#1b2434; --muted:#5a6577; --faint:#8893a6;
+  --accent:#5d5cf0; --accent2:#5654d6; --accent-soft:rgba(109,108,242,.12);
+  --cyan:#0c91ad;
+  --green:#0f9d65; --green-soft:rgba(16,169,101,.12);
+  --red:#dc3552; --red-soft:rgba(220,53,82,.10);
+  --amber:#b7791f;
+  --shadow:0 1px 2px rgba(16,24,40,.04), 0 14px 30px -20px rgba(16,24,40,.22);
+  --shadow-lift:0 1px 2px rgba(16,24,40,.05), 0 22px 44px -22px rgba(16,24,40,.28), 0 0 0 1px rgba(93,92,240,.12);
+}
+html:not([data-theme="dark"]) body::before{display:none!important}
+html:not([data-theme="dark"]) .kw{background:linear-gradient(180deg,#1f2840,#55617a)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important}
+html:not([data-theme="dark"]) a:hover{color:var(--accent)!important}
+html:not([data-theme="dark"]) .tb-nav a:hover{background:rgba(16,24,40,.05)!important}
+html:not([data-theme="dark"]) .tb-nav a.active{color:var(--accent)!important}
+html:not([data-theme="dark"]) .topbar{background:rgba(255,255,255,.82)!important}
+html:not([data-theme="dark"]) ::-webkit-scrollbar-thumb{background:#cdd4e1!important;border-color:var(--bg)!important}
+html:not([data-theme="dark"]) ::-webkit-scrollbar-thumb:hover{background:#b6c0d2!important}
+html:not([data-theme="dark"]) .prose{color:#33405a!important}
+html:not([data-theme="dark"]) .prose h2,html:not([data-theme="dark"]) .prose strong{color:var(--ink)!important}
+html:not([data-theme="dark"]) .prose h3{color:#26324a!important}
+html:not([data-theme="dark"]) .prose code{background:#eef1f8!important;color:#0c7d96!important;border-color:var(--line)!important}
+html:not([data-theme="dark"]) .pill.cat{background:var(--card2)!important;color:var(--muted)!important}
+html:not([data-theme="dark"]) .track,html:not([data-theme="dark"]) .sbar .t{background:#e9edf5!important}
+html:not([data-theme="dark"]) .sbar .f.mut{background:#c2cad8!important}
+html:not([data-theme="dark"]) #sec-entities tbody tr:hover .ecol{background:#eef1f7!important}
+html:not([data-theme="dark"]) #sec-entities .ent-chip{color:#b23048!important}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="tb-brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 5-7"/></svg></span><span class="tx">RankLens</span></span>
+    <nav class="tb-nav">
+      {% if has_target %}<a href="#sec-score">Score</a>{% endif %}
+      {% if report.funnel %}<a href="#sec-funnel">Funnel</a>{% endif %}
+      {% if report.competitor_cards %}<a href="#sec-cards">Competitors</a>{% endif %}
+      {% if report.semantic %}<a href="#sec-semantic">Coverage</a>{% endif %}
+      {% if offpage %}<a href="#sec-authority">Authority</a>{% endif %}
+      {% if brand %}<a href="#sec-brand">Brand</a>{% endif %}
+      {% if topical %}<a href="#sec-topical">Topical</a>{% endif %}
+      {% if entity_table and entity_table.n_entities %}<a href="#sec-entities">Entities</a>{% endif %}
+      {% if report.writing_brief %}<a href="#sec-brief">Brief</a>{% endif %}
+      {% if ai_html %}<a href="#sec-analysis">Analysis</a>{% endif %}
+      {% if roadmap %}<a href="#sec-roadmap">Roadmap</a>{% endif %}
+      {% if correlations %}<a href="#sec-factors">Factors</a>{% endif %}
+      {% if serp.items %}<a href="#sec-serp">SERP</a>{% endif %}
+    </nav>
+    <button type="button" id="rl-theme-toggle" class="tb-theme" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+  <div class="tb-progress"><i id="readbar"></i></div>
+</div>
+<script>
+(function(){var b=document.getElementById('rl-theme-toggle');if(!b)return;
+b.addEventListener('click',function(){var d=document.documentElement;
+if(d.getAttribute('data-theme')==='dark'){d.removeAttribute('data-theme');try{localStorage.setItem('rl-theme','light');}catch(e){}}
+else{d.setAttribute('data-theme','dark');try{localStorage.setItem('rl-theme','dark');}catch(e){}}});})();
+</script>
+
+<div class="wrap">
+
+  <div class="brand">
+    <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 5-7"/></svg></span>
+    <b>RankLens</b><span class="tag">SERP correlation report</span>
+  </div>
+
+  <div class="hero-head">
+    <div class="kw-label">Keyword analyzed</div>
+    <div class="kw">{{ request.keyword }}</div>
+    <div class="meta-row">
+      <span class="chip"><span class="dot"></span>{{ request.country|upper }} · {{ request.language|upper }}</span>
+      <span class="chip"><b>{{ report.n_pages_analyzed }}</b> pages analyzed</span>
+      <span class="chip"><b>{{ report.pages_fetched_ok }}</b> fetched OK</span>
+      <span class="chip">significance <b>|r| &gt; {{ '%.2f'|format(report.significance_threshold) }}</b></span>
+      <span class="chip muted">{{ report.generated_at.strftime('%b %d, %Y · %H:%M UTC') }}</span>
+    </div>
+  </div>
+
+  {% if has_target %}
+  {% set t = target %}
+  {% set score = (t.optimization_score|round)|int %}
+  {% set circ = 2 * 3.14159265 * 78 %}
+  {% set off = circ * (1 - score/100) %}
+  {% set gcol = 'var(--green)' if score >= 70 else ('var(--amber)' if score >= 40 else 'var(--red)') %}
+  <div class="card reveal" id="sec-score">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <h2>Optimization scorecard</h2>
+      <span class="sub">your page vs. the top-{{ report.n_pages_analyzed }}</span>
+    </div>
+    <div class="scorecard">
+      <div class="gauge">
+        <svg width="172" height="172" viewBox="0 0 172 172">
+          <circle cx="86" cy="86" r="78" fill="none" stroke="#1b2333" stroke-width="13"/>
+          <circle cx="86" cy="86" r="78" fill="none" stroke="{{ gcol }}" stroke-width="13"
+                  stroke-linecap="round" stroke-dasharray="{{ '%.1f'|format(circ) }}"
+                  stroke-dashoffset="{{ '%.1f'|format(off) }}"/>
+        </svg>
+        <div class="val"><div class="num" style="color:{{ gcol }}">{{ score }}</div><div class="den">/ 100 score</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">{{ t.factors_met }}<span class="faint" style="font-size:16px"> / {{ t.factors_total }}</span></div><div class="l">significant factors met</div></div>
+        <div class="stat"><div class="n" style="color:var(--green)">{{ t.quick_wins }}</div><div class="l">quick wins available</div></div>
+        <div class="stat tgt">
+          <div class="l" style="margin-bottom:4px">Target page</div>
+          <div class="n url">{{ t.url }}</div>
+          {% if t.found_in_serp %}
+            <span class="rankpill">▲ Ranking #{{ t.serp_rank }} in this SERP</span>
+          {% else %}
+            <span class="rankpill" style="background:var(--red-soft);color:var(--red)">Not ranking in top-{{ report.n_pages_analyzed }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if report.funnel %}
+  {% set funnel = report.funnel %}
+  <div class="card reveal" id="sec-funnel">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8Z"/></svg></span>
+      <h2>Ranking funnel</h2>
+      <span class="sub">the eight gates Google uses to narrow the field</span>
+    </div>
+    <div class="funnel-callout">
+      <div class="overall">{{ funnel.overall_score|round|int if funnel.overall_score is not none else '—' }} <small>/ 100</small></div>
+      <div class="summary">{{ funnel.summary }}</div>
+    </div>
+    {% for gate in funnel.gates %}
+    {% set gate_score = gate.score|round|int if gate.score is not none else 0 %}
+    {% set verdict_class = 'na' if gate.verdict == 'n/a' else gate.verdict %}
+    <div class="gate-row">
+      <div class="gate-name">{{ loop.index0 }} · {{ gate.name or gate.gate|replace('_', ' ')|title }}</div>
+      <div class="gate-score">
+        <div class="gate-track"><div class="gate-fill" style="width:{{ gate_score }}%"></div></div>
+        <span class="gate-num">{{ gate_score if gate.score is not none else '—' }}</span>
+      </div>
+      <span class="verdict {{ verdict_class }}">{{ gate.verdict }}</span>
+      <span class="tier {{ gate.evidence_tier }}">{% if gate.evidence_tier == 'estimated' %}simulated · {% endif %}{{ gate.evidence_tier }}</span>
+      {% if gate.details %}<ul class="gate-details">{% for detail in gate.details %}<li>{{ detail }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if report.competitor_cards %}
+  <div class="card reveal" id="sec-cards">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="m21 3-7 7"/><path d="M8 21H3v-5"/><path d="m3 21 7-7"/></svg></span>
+      <h2>Why they outrank you</h2>
+      <span class="sub">their largest evidence-backed gate advantages</span>
+    </div>
+    <div class="competitor-grid">
+      {% for card in report.competitor_cards %}
+      <article class="competitor-card">
+        <div class="competitor-head"><span class="serp-rank {{ 'top' if card.rank <= 3 else '' }}">{{ card.rank }}</span><a class="domain" href="{{ card.url }}" target="_blank" rel="noopener">{{ card.domain or card.url }}</a></div>
+        {% for reason in card.reasons %}<div class="reason">{{ reason.text }}{% if reason.evidence %}<span class="reason-evidence">{{ reason.evidence }}</span>{% endif %}</div>{% endfor %}
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if report.semantic %}
+  {% set sem = report.semantic %}
+  {% set sem_ranks = sem.coverage.keys()|reject('equalto', 0)|sort|list %}
+  <div class="card reveal" id="sec-semantic">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+      <h2>Semantic coverage</h2>
+      <span class="sub">best-passage relevance by searcher sub-intent</span>
+    </div>
+    <div class="semantic-scroll"><table>
+      <thead><tr><th class="no-sort">Sub-intent</th><th class="no-sort cover-you">YOU</th>{% for rank in sem_ranks %}<th class="no-sort">#{{ rank }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for intent in sem.sub_intents %}<tr>
+        <td><span class="fname">{{ intent.name }}</span>{% if intent.description %}<div class="grp">{{ intent.description }}</div>{% endif %}</td>
+        {% for rank in [0] + sem_ranks %}
+        {% set value = sem.coverage.get(rank, {}).get(intent.name, 0) %}
+        {% set bounded = 0 if value < 0 else (1 if value > 1 else value) %}
+        {% set red = (251 + (61 - 251) * bounded)|round|int %}{% set green = (113 + (220 - 113) * bounded)|round|int %}{% set blue = (133 + (151 - 133) * bounded)|round|int %}
+        <td class="heat-cell {{ 'cover-you' if rank == 0 else '' }}" style="background:rgb({{ red }},{{ green }},{{ blue }})">{{ (bounded * 100)|round|int }}</td>
+        {% endfor %}
+      </tr>{% endfor %}</tbody>
+    </table></div>
+    {% if sem.open_gaps %}<div class="opportunity"><h3>Information gain opportunities</h3><ul>{% for gap in sem.open_gaps %}<li>{{ gap }}</li>{% endfor %}</ul></div>{% endif %}
+    {% if sem.target_best_passage %}<blockquote class="best-passage">{{ sem.target_best_passage }}</blockquote>{% endif %}
+    <div class="semantic-meta">Method: <b>{{ sem.method }}</b>{% if report.intent_fit and report.intent_fit.note %} · {{ report.intent_fit.note }}{% endif %}</div>
+  </div>
+  {% endif %}
+
+  {% if offpage %}
+  <div class="card reveal" id="sec-authority">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span>
+      <h2>Off-page authority</h2>
+      <span class="sub">backlink power &amp; quality</span>
+    </div>
+    <div class="stat-grid compact">
+      <div class="stat">
+        <div class="n">{{ offpage.target_page_stats.authority_score|fmt if offpage.target_page_stats and offpage.target_page_stats.authority_score is not none else '—' }}{% if offpage.page1_avg_page_authority is not none %}<span class="faint"> vs {{ offpage.page1_avg_page_authority|fmt }}</span>{% endif %}</div>
+        <div class="l">Page authority</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ offpage.target_page_stats.referring_domains|fmt if offpage.target_page_stats and offpage.target_page_stats.referring_domains is not none else '—' }}{% if offpage.page1_avg_ref_domains is not none %}<span class="faint"> vs {{ offpage.page1_avg_ref_domains|fmt }}</span>{% endif %}</div>
+        <div class="l">Ref. domains</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ offpage.target_domain_stats.authority_score|fmt if offpage.target_domain_stats and offpage.target_domain_stats.authority_score is not none else '—' }}</div>
+        <div class="l">Domain authority</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ offpage.target_homepage_stats.authority_score|fmt if offpage.target_homepage_stats and offpage.target_homepage_stats.authority_score is not none else '—' }}</div>
+        <div class="l">Homepage auth.</div>
+      </div>
+      {% if offpage.link_quality and offpage.link_quality.score is not none %}
+      <div class="stat tgt">
+        <div class="n">{{ offpage.link_quality.score|fmt }}<span class="faint"> / 100</span></div>
+        <div class="l">Link quality</div>
+      </div>
+      {% endif %}
+    </div>
+    {% if offpage.link_quality and offpage.link_quality.summary %}
+    <div class="act" style="margin-top:14px;font-size:12.5px;color:var(--muted)">{{ offpage.link_quality.summary }}</div>
+    {% endif %}
+    {% if backlink_pages %}
+    <div class="bl-bar">
+      <span class="bl-cap">Referring domains by ranking page <span class="sub2">— top link per domain, spam filtered</span></span>
+      {% if backlink_pages|length > 1 %}
+      <div class="bl-nav">
+        <button type="button" class="bl-arrow" id="blPrev" aria-label="Previous ranking page">‹ Prev</button>
+        <button type="button" class="bl-arrow" id="blNext" aria-label="Next ranking page">Next ›</button>
+      </div>
+      {% endif %}
+    </div>
+    <div class="bl-frame" id="blFrame">
+    <div class="bl-banner" id="blBanner"></div>
+    <div class="tbl-wrap">
+    <table id="blTable">
+      <thead><tr>
+        <th class="no-sort" style="cursor:default">Referring domain</th>
+        <th class="no-sort" style="cursor:default">Anchor</th>
+        <th class="no-sort" style="cursor:default">DoFollow</th>
+        <th class="no-sort" style="cursor:default">Source authority</th>
+        <th class="no-sort" style="cursor:default">Topical relevance</th>
+      </tr></thead>
+      {% for pg in backlink_pages %}
+      <tbody class="bl-page" data-idx="{{ loop.index0 }}" data-dom="{{ pg.to_domain }}" data-rank="{{ pg.to_rank if pg.to_rank is not none else '' }}" data-target="{{ '1' if pg.is_target else '0' }}" data-count="{{ pg.ref_count }}"{% if not loop.first %} style="display:none"{% endif %}>
+      {% for bl in pg.links %}
+        <tr>
+          <td class="serp-dom"><a href="{{ bl.source_url }}" target="_blank" rel="noopener">{{ bl.source_domain or bl.source_url }}</a></td>
+          <td class="muted">{{ bl.anchor or '—' }}</td>
+          <td>{% if bl.dofollow %}<span class="ok">✓</span>{% else %}<span class="dim">✗</span>{% endif %}</td>
+          <td>{{ bl.source_authority|fmt }}</td>
+          <td>
+            {% if bl.topical_relevance is not none %}
+            {% set rel = (bl.topical_relevance * 100)|round|int %}
+            <div class="sbar">
+              <div class="t"><div class="f pos" style="width:{{ rel }}%"></div></div>
+              <div class="v">{{ rel }}%</div>
+            </div>
+            {% else %}<span class="dim">—</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      {% endfor %}
+    </table>
+    </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if brand %}
+  <div class="card reveal" id="sec-brand">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+      <h2>Brand demand</h2>
+      <span class="sub">branded search volume</span>
+    </div>
+    <div class="stat-grid">
+      <div class="stat tgt">
+        <div class="n" style="font-size:18px;font-weight:680">{{ brand.brand_term or '—' }}</div>
+        <div class="l">Your brand</div>
+      </div>
+      <div class="stat tgt">
+        <div class="n">{{ brand.target_brand_volume|fmt if brand.target_brand_volume is not none else '—' }}{% if brand.page1_avg_brand_volume is not none %}<span class="faint" style="font-size:14px"> vs {{ brand.page1_avg_brand_volume|fmt }} avg</span>{% endif %}</div>
+        <div class="l">Total branded searches / mo</div>
+      </div>
+      <div class="stat">
+        <div class="n">{% if brand.brand_rank is not none and brand.competitors|length > 1 %}#{{ brand.brand_rank }}<span class="faint" style="font-size:15px;font-weight:600"> / {{ brand.competitors|length }}</span>{% else %}—{% endif %}</div>
+        <div class="l">Brand-strength rank</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ brand.target_brand_keywords|length or '—' }}</div>
+        <div class="l">Your brand variations</div>
+      </div>
+    </div>
+
+    {% if brand.target_brand_keywords %}
+    <div class="brand-h">Your brand searches <span class="sub2">— every variation people type, summed</span></div>
+    <div class="tbl-wrap" style="margin-top:8px">
+    <table style="min-width:420px">
+      <thead><tr>
+        <th class="no-sort" style="cursor:default">Brand search term</th>
+        <th class="no-sort" style="cursor:default;text-align:right">Searches / mo</th>
+      </tr></thead>
+      <tbody>
+      {% for kw in brand.target_brand_keywords %}
+        <tr>
+          <td class="serp-dom">{{ kw.phrase }}</td>
+          <td class="num">{{ kw.volume|fmt }}</td>
+        </tr>
+      {% endfor %}
+        <tr class="brand-tot">
+          <td>Total branded demand</td>
+          <td class="num">{{ brand.target_brand_volume|fmt if brand.target_brand_volume is not none else '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+
+    {% if brand.competitors and brand.competitors|length > 1 %}
+    <div class="brand-h">Brand strength vs your top {{ brand.competitors|length - 1 }} competitors <span class="sub2">— who owns the most brand demand</span></div>
+    <div class="tbl-wrap" style="margin-top:8px">
+    <table style="min-width:600px">
+      <thead><tr>
+        <th class="no-sort" style="cursor:default">Brand</th>
+        <th class="no-sort" style="cursor:default">SERP&nbsp;rank</th>
+        <th class="no-sort" style="cursor:default">Variations</th>
+        <th class="no-sort" style="cursor:default;text-align:right">Branded&nbsp;searches&nbsp;/&nbsp;mo</th>
+        <th class="no-sort" style="cursor:default">Top brand terms</th>
+      </tr></thead>
+      <tbody>
+      {% for c in brand.competitors %}
+        <tr class="{{ 'brand-you' if c.is_target else '' }}">
+          <td style="white-space:nowrap">
+            {% if c.is_target %}<span class="brand-yb">YOU</span>{% endif %}
+            <span class="serp-dom" style="font-weight:640">{{ c.brand_term or c.domain }}</span>
+            <div class="faint" style="font-size:11px;margin-top:1px">{{ c.domain }}</div>
+          </td>
+          <td><span class="serp-rank {{ 'top' if c.rank and c.rank <= 3 else '' }}">{{ c.rank if c.rank is not none else '·' }}</span></td>
+          <td>{{ c.keyword_count }}</td>
+          <td class="num" style="font-weight:700">{{ c.total_volume|fmt }}</td>
+          <td class="muted" style="font-size:11.5px;white-space:normal">{% for kw in c.top_keywords %}{{ kw.phrase }} <span class="faint">({{ kw.volume|fmt }})</span>{% if not loop.last %} · {% endif %}{% endfor %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+
+    {% if brand.summary %}
+    <div class="act" style="margin-top:14px;font-size:12.5px;color:var(--muted)">{{ brand.summary }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if topical %}
+  {% set tcol = 'var(--green)' if topical.score >= 70 else ('var(--amber)' if topical.score >= 40 else 'var(--red)') %}
+  <div class="card reveal" id="sec-topical">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M9.5 11 6.6 7.6M14.5 11l2.9-3.4M9.5 13l-2.9 3.4M14.5 13l2.9 3.4"/></svg></span>
+      <h2>Topical authority</h2>
+      <span class="sub">does {{ topical.domain }} back this topic</span>
+    </div>
+    <div class="stat-grid">
+      <div class="stat tgt">
+        <div class="n" style="color:{{ tcol }};font-size:30px;font-weight:760">{{ topical.score|round|int }}<span class="faint" style="font-size:15px;font-weight:600"> / 100</span></div>
+        <div class="l">Authority score · <span style="color:{{ tcol }};font-weight:700;text-transform:uppercase;letter-spacing:.04em">{{ topical.band }}</span></div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ topical.cluster_size }}<span class="faint" style="font-size:14px"> / {{ topical.sitemap_total }} pages</span></div>
+        <div class="l">On-topic cluster pages</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ (topical.focus_ratio * 100)|round(1) }}<span class="faint" style="font-size:14px">%</span></div>
+        <div class="l">Site focus on this topic</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ topical.adjacent_covered }}<span class="faint" style="font-size:14px"> / {{ topical.adjacent|length }}</span></div>
+        <div class="l">Supporting subtopics</div>
+      </div>
+      <div class="stat">
+        <div class="n">{{ topical.serp_indexed_hits }}</div>
+        <div class="l">Google site: relevant hits</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:9px;align-items:center">
+      {% if topical.supports_target %}
+      <span class="rankpill">✓ Cluster supports this page</span>
+      {% else %}
+      <span class="rankpill" style="background:var(--red-soft);color:var(--red)">⚠ Page is an island — thin cluster</span>
+      {% endif %}
+      {% if topical.target_url %}
+        {% if topical.target_in_cluster %}<span class="chip"><span class="dot"></span>Target page in cluster</span>{% endif %}
+        {% if topical.target_is_canonical %}<span class="chip"><span class="dot"></span>Top site: result for the topic</span>{% endif %}
+      {% endif %}
+      {% if not topical.sitemap_found %}<span class="chip muted">no sitemap found — SERP-only read</span>{% endif %}
+    </div>
+    {% if topical.summary %}
+    <div class="act" style="margin-top:14px;font-size:12.5px;color:var(--muted)">{{ topical.summary }}</div>
+    {% endif %}
+    {% if topical.ai_narrative %}
+    <div class="act" style="margin-top:10px;font-size:13px;color:var(--ink);line-height:1.6">{{ topical.ai_narrative }}</div>
+    {% endif %}
+    {% if topical.cluster %}
+    <div class="bl-bar" style="margin-top:18px"><span class="bl-cap">On-topic pages found ({{ topical.cluster|length }})</span></div>
+    <div class="tbl-wrap" style="margin-top:10px">
+    <table>
+      <thead><tr>
+        <th class="no-sort" style="cursor:default">Page</th>
+        <th class="no-sort" style="cursor:default">Evidence</th>
+        <th class="no-sort" style="cursor:default">Matched terms</th>
+      </tr></thead>
+      <tbody>
+      {% for p in topical.cluster[:25] %}
+        <tr>
+          <td style="max-width:420px;overflow:hidden;text-overflow:ellipsis"><a href="{{ p.url }}" target="_blank" rel="noopener" style="color:var(--cyan)">{{ p.title or p.url }}</a></td>
+          <td>
+            {% if p.serp_hit %}<span class="fpill">Google</span>{% endif %}
+            {% if p.in_sitemap %}<span class="fpill">sitemap</span>{% endif %}
+            {% if p.is_adjacent %}<span class="fpill" style="border-color:var(--amber);color:var(--amber)">supporting</span>{% endif %}
+          </td>
+          <td class="faint" style="font-size:11.5px">{{ p.matched_terms|join(', ') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if ai_html %}
+  <div class="card ai-card reveal" id="sec-analysis">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></span>
+      <h2>AI analysis</h2>
+      <span class="sub">what's driving rankings here</span>
+    </div>
+    <div class="prose">{{ ai_html|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if entity_table and entity_table.n_entities %}
+  {% set et = entity_table %}
+  {% set nbrands = et.ranks|length - (1 if et.has_target else 0) %}
+  <div class="card reveal" id="sec-entities">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M6.6 7.4 10.6 16M17.4 7.4 13.4 16M7 6h10"/></svg></span>
+      <h2>Topical entity map</h2>
+      <span class="sub">the top {{ nbrands }} brands vs you</span>
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><div class="n">{{ et.n_entities }}</div><div class="l">topical entities</div></div>
+      <div class="stat"><div class="n">{{ et.n_graded_pairs }}</div><div class="l">consensus claims <span title="asserted by 2+ ranking pages — page-specific claims are shown as market intel but never graded as your gaps">ⓘ</span></div></div>
+      <div class="stat"><div class="n">{{ et.n_pairs - et.n_graded_pairs }}</div><div class="l">page-specific claims</div></div>
+      <div class="stat"><div class="n">{{ et.n_edges }}</div><div class="l">relationships</div></div>
+      {% if et.has_target %}
+      <div class="stat tgt">
+        {% if et.target_completeness is not none %}
+        <div class="n" style="font-size:25px;font-weight:720;{{ 'color:var(--green)' if et.target_completeness >= 0.7 else ('color:var(--amber)' if et.target_completeness >= 0.4 else 'color:var(--red)') }}">{{ (et.target_completeness*100)|round|int }}%</div>
+        <div class="l">consensus claims you cover</div>
+        {% else %}
+        <div class="n" style="font-size:25px;font-weight:720;color:var(--faint)">—</div>
+        <div class="l">no consensus claims to grade</div>
+        {% endif %}
+      </div>
+      <div class="stat"><div class="n" style="color:var(--red)">{{ et.must_add_entities|length }}</div><div class="l">entities missing</div></div>
+      {% endif %}
+    </div>
+    {% if et.summary %}
+    <div class="act ent-summary">{{ et.summary }}</div>
+    {% endif %}
+
+    {% if et.must_add_entities %}
+    <div class="ent-miss-lab">Add these entities — the top pages cover them, you don't</div>
+    <div class="ent-chips">
+      {% for name in et.must_add_entities %}
+      <span class="ent-chip"><span class="pl">+</span>{{ name }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if et.coverage_rows %}
+    <div class="ent-heading">Entity coverage<span class="ln"></span></div>
+    <div class="ent-sub">which topical entities each ranking page mentions, and whether you do</div>
+    <div class="ent-scroll">
+    <table>
+      <thead><tr>
+        <th class="ecol">Entity</th>
+        {% for rk in et.ranks %}
+        <th class="col-rank" title="{{ et.rank_domains.get(rk, '') }}">
+          {% if rk == 0 %}<span class="rh you">YOU</span>{% else %}<span class="rh">{{ rk }}</span>{% endif %}
+        </th>
+        {% endfor %}
+        <th class="col-rank" style="width:auto">Consensus</th>
+      </tr></thead>
+      <tbody>
+      {% for row in et.coverage_rows[:40] %}
+        <tr class="{{ 'gap-entity' if row.gap == 'missing_entity' else '' }}">
+          <td class="ecol"><span class="ename">{{ row.entity }}</span>{% if row.entity_type %}<span class="etype">{{ row.entity_type }}</span>{% endif %}</td>
+          {% for rk in et.ranks %}
+          {% set cell = row.cells.get(rk) %}
+          <td class="col-rank">
+            {% if rk == 0 %}
+              {% if cell and cell.present %}<span class="you-yes">✓</span>{% else %}<span class="you-no">✗</span>{% endif %}
+            {% else %}
+              {% if cell and cell.present %}<span class="dot" style="opacity:{{ '%.2f'|format(0.35 + 0.65 * cell.salience) }}"></span>{% else %}<span class="absent">·</span>{% endif %}
+            {% endif %}
+          </td>
+          {% endfor %}
+          <td class="col-rank" style="width:auto"><span class="cons">{{ row.consensus }}/{{ nbrands }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if et.coverage_rows|length > 40 %}<div class="ent-more">+{{ et.coverage_rows|length - 40 }} more entities not shown</div>{% endif %}
+    {% endif %}
+
+    {% if et.eav_rows %}
+    {% set graded_rows = et.eav_rows|selectattr('graded')|list %}
+    {% set intel_rows = et.eav_rows|rejectattr('graded')|list %}
+    {% set shown_rows = graded_rows if graded_rows else intel_rows[:15] %}
+    <div class="ent-heading">Attributes &amp; values — what's asserted, what's missing<span class="ln"></span></div>
+    <div class="ent-sub">each row is one (entity, attribute) claim asserted by 2+ ranking pages; “The ranking business” = each page's own business/service, aligned so first-party facts compare — the YOU column shows your gap</div>
+    <div class="corr-bar eav-bar" id="eavBar">
+      <div class="fgroups" id="eavPills"></div>
+      <div class="corr-bar-right">
+        <span class="corr-count" id="eavCount"></span>
+        <button type="button" class="nextg" id="eavPrev">◂ Prev</button>
+        <button type="button" class="nextg" id="eavNext">Next ▸</button>
+      </div>
+    </div>
+    <div class="eav-gap-banner" id="eavBanner"></div>
+    <div class="ent-scroll">
+    <table>
+      <thead><tr>
+        <th class="ecol">Entity · Attribute</th>
+        <th class="col-you" style="width:auto"><span class="rh you">YOU</span></th>
+        {% for rk in et.ranks %}{% if rk != 0 %}
+        <th class="col-rank" style="width:auto" title="{{ et.rank_domains.get(rk, '') }}"><span class="rh">{{ rk }}</span></th>
+        {% endif %}{% endfor %}
+        <th style="width:auto">Consensus</th>
+      </tr></thead>
+      <tbody id="eavBody">
+      {% for row in shown_rows %}
+        <tr data-attr="{{ row.attribute }}" data-entity="{{ row.entity }}" data-gap="{{ (row.gap or 'ok') if row.graded else 'intel' }}">
+          <td class="ecol">
+            <span class="ename">{{ row.entity }}</span>{% if row.entity_type %}<span class="etype">{{ row.entity_type }}</span>{% endif %}
+            <div class="eattr">{% if row.is_edge %}→ {{ row.attribute }} →{% else %}{{ row.attribute }}{% endif %}</div>
+          </td>
+          {% if not et.target_read_ok %}
+          <td class="youc col-you" title="your page's fact extraction failed this run">?</td>
+          {% elif not row.graded %}
+          <td class="youc col-you" title="{{ row.target_value }}">{{ row.target_value or '·' }}</td>
+          {% elif row.gap == '' %}
+          <td class="youc col-you c-ok" title="{{ row.target_value }}">{{ row.target_value or '✓' }}</td>
+          {% elif row.gap == 'off_consensus' %}
+          <td class="youc col-you c-warn" title="{{ row.target_value }}">{{ row.target_value }}<span class="off">⚠ off</span></td>
+          {% elif row.gap == 'missing_value' %}
+          <td class="youc col-you c-miss">✗ no value</td>
+          {% elif row.gap == 'missing_attribute' %}
+          <td class="youc col-you c-miss">✗ no attribute</td>
+          {% else %}
+          <td class="youc col-you c-miss">✗ entity missing</td>
+          {% endif %}
+          {% for rk in et.ranks %}{% if rk != 0 %}
+          {% set cell = row.cells.get(rk) %}
+          <td>{% if cell and cell.present and cell.value %}<div class="vcell" title="{{ cell.value }}">{{ cell.value }}</div>{% else %}<span class="absent">·</span>{% endif %}</td>
+          {% endif %}{% endfor %}
+          <td>{% if row.consensus_value %}<div class="consval" title="{{ row.consensus_value }}">{{ row.consensus_value }}</div>{% else %}<span class="absent">·</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if graded_rows and intel_rows %}
+    <div class="ent-more">+{{ intel_rows|length }} page-specific claims (asserted by a single page) kept out of your gap grading</div>
+    {% elif not graded_rows %}
+    <div class="ent-more">No claim reached cross-page consensus on this SERP — showing the top page-specific claims as market intel (not graded as your gaps).</div>
+    {% endif %}
+    {% endif %}
+
+    {% if et.edge_rows %}
+    {% set graded_edges = et.edge_rows|selectattr('graded')|list %}
+    {% set intel_edges = et.edge_rows|rejectattr('graded')|list %}
+    {% set shown_edges = graded_edges if graded_edges else intel_edges[:12] %}
+    <div class="ent-heading">Relationships &amp; connections — how entities link<span class="ln"></span></div>
+    <div class="ent-sub">each row is one (entity → relationship → entity) connection asserted by 2+ ranking pages; the YOU column shows whether you make it too</div>
+    <div class="ent-scroll">
+    <table>
+      <thead><tr>
+        <th class="ecol">Entity · Relationship</th>
+        {% if et.has_target %}<th class="col-you" style="width:auto"><span class="rh you">YOU</span></th>{% endif %}
+        {% for rk in et.ranks %}{% if rk != 0 %}
+        <th class="col-rank" style="width:auto" title="{{ et.rank_domains.get(rk, '') }}"><span class="rh">{{ rk }}</span></th>
+        {% endif %}{% endfor %}
+        <th style="width:auto">Consensus target</th>
+      </tr></thead>
+      <tbody>
+      {% for row in shown_edges[:40] %}
+        <tr>
+          <td class="ecol">
+            <span class="ename">{{ row.entity }}</span>{% if row.entity_type %}<span class="etype">{{ row.entity_type }}</span>{% endif %}
+            <div class="eattr">→ {{ row.attribute }} →</div>
+          </td>
+          {% if et.has_target %}
+          {% if not et.target_read_ok %}
+          <td class="youc col-you" title="your page's fact extraction failed this run">?</td>
+          {% elif not row.graded %}
+          <td class="youc col-you" title="{{ row.target_value }}">{{ row.target_value or '·' }}</td>
+          {% elif row.gap == '' %}
+          <td class="youc col-you c-ok" title="{{ row.target_value }}">{{ row.target_value or '✓' }}</td>
+          {% elif row.gap == 'off_consensus' %}
+          <td class="youc col-you c-warn" title="{{ row.target_value }}">{{ row.target_value }}<span class="off">⚠ differs</span></td>
+          {% else %}
+          <td class="youc col-you c-miss">✗ not linked</td>
+          {% endif %}
+          {% endif %}
+          {% for rk in et.ranks %}{% if rk != 0 %}
+          {% set cell = row.cells.get(rk) %}
+          <td>{% if cell and cell.present and cell.value %}<div class="vcell" title="{{ cell.value }}">{{ cell.value }}</div>{% else %}<span class="absent">·</span>{% endif %}</td>
+          {% endif %}{% endfor %}
+          <td>{% if row.consensus_value %}<div class="consval" title="{{ row.consensus_value }}">{{ row.consensus_value }}</div>{% else %}<span class="absent">·</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if graded_edges and intel_edges %}
+    <div class="ent-more">+{{ intel_edges|length }} page-specific connections (single page) kept out of your gap grading</div>
+    {% elif not graded_edges %}
+    <div class="ent-more">No connection reached cross-page consensus — showing page-specific ones as market intel (not graded).</div>
+    {% endif %}
+    {% endif %}
+
+    <div class="ent-legend">
+      <span><span class="dot" style="opacity:.9"></span> filled dot = mentioned (brighter = more salient)</span>
+      <span><span class="absent">·</span> faint dot = not mentioned</span>
+      <span><span class="you-yes">✓</span> you cover it &nbsp;/&nbsp; <span class="you-no">✗</span> you don't</span>
+      <span><i class="lg-ok"></i> on consensus</span>
+      <span><i class="lg-warn"></i> ⚠ off consensus</span>
+      <span><i class="lg-miss"></i> missing claim</span>
+      <span>only claims made by 2+ pages are graded as gaps</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if report.writing_brief %}
+  {% set wb = report.writing_brief %}
+  <div class="card reveal" id="sec-brief">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+      <h2>Writing brief</h2>
+      <span class="sub">what your page should say — for you or your AI writer</span>
+    </div>
+    <div class="act ent-summary">{{ wb.summary }}</div>
+    {% for title, items in [
+        ("Entities to add — the top pages cover these, you don't", wb.entities_to_add),
+        ("Topics worth covering", wb.topics_to_expand),
+        ("Facts to state", wb.facts_to_state),
+        ("Values to double-check", wb.values_to_review),
+        ("Connections to make explicit", wb.relationships_to_make),
+        ("Content shape targets", wb.style_targets),
+      ] %}
+    {% if items %}
+    <div class="ent-heading">{{ title }}<span class="ln"></span></div>
+    <ul class="brief-list">
+      {% for it in items %}
+      <li>{{ it.text }}{% if it.evidence %}<span class="brief-ev">{{ it.evidence }}</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endfor %}
+    {% if wb.llm_prompt %}
+    <div class="ent-heading">Prompt for your AI writer<span class="ln"></span></div>
+    <div class="ent-sub">copy this into ChatGPT / Claude / Gemini together with your current page copy — it carries every recommendation above</div>
+    <div class="brief-prompt-wrap">
+      <button type="button" class="nextg brief-copy" id="briefCopy">Copy prompt</button>
+      <pre class="brief-prompt" id="briefPrompt">{{ wb.llm_prompt }}</pre>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if roadmap %}
+  <div class="card reveal" id="sec-roadmap">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span>
+      <h2>Prioritized roadmap</h2>
+      <span class="sub">the 10 highest-impact fixes · on-page, entities, links &amp; brand · grouped by phase</span>
+    </div>
+    {% for phase, recs in roadmap %}
+    <div class="phase">
+      <div class="phase-h"><span class="nm">{{ phase }}</span><span class="ln"></span><span class="ct">{{ recs|length }} action{{ 's' if recs|length != 1 else '' }}</span></div>
+      {% for r in recs %}
+      {% set cur = r.current if r.current is not none else 0 %}
+      {% set goal = r.goal if r.goal is not none else 0 %}
+      {% set scale = (goal if goal > cur else cur) %}
+      {% set curpct = (100.0 * cur / scale)|round(1) if scale and scale > 0 else 0 %}
+      {% set goalpct = (100.0 * goal / scale)|round(1) if scale and scale > 0 else 100 %}
+      <div class="rec">
+        <div>
+          <div class="nm">
+            {{ r.name }}
+            {% if r.correlation is not none %}
+              <span class="chipr {{ 'pos' if r.correlation >= 0 else 'neg' }}">r {{ '%+.2f'|format(r.correlation) }}</span>
+            {% endif %}
+            {% if r.top200 %}<span class="pill t200">Top 200</span>{% endif %}
+            <span class="pill {{ 'easy' if r.difficulty|lower == 'easy' else 'diff' }}">{{ r.difficulty }}</span>
+            <span class="pill cat">{{ r.category }}</span>
+          </div>
+          {% if r.action_text %}<div class="act">{{ r.action_text }}</div>{% endif %}
+        </div>
+        <div class="dbar">
+          <div class="lab"><span>you <b>{{ r.current|fmt }}</b></span><span>goal <b>{{ r.goal|fmt }}</b></span></div>
+          <div class="track">
+            <div class="cur" style="width:{{ curpct }}%"></div>
+            <div class="goal" style="left:{{ goalpct }}%"></div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if correlations %}
+  <div class="card reveal" id="sec-factors">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7"/><rect x="12" y="7" width="3" height="11"/><rect x="17" y="13" width="3" height="5"/></svg></span>
+      <h2>Factor correlations</h2>
+      <span class="sub">{% if has_target %}filter by group · hide on-target rows · click a header to sort{% else %}sorted by strength · click a header to sort{% endif %}</span>
+    </div>
+
+    {% set GCOLORS = {'Content':'#818cf8','Headings':'#22d3ee','Technical':'#fbbf24','Schema':'#34d399','Authority':'#f472b6','Links':'#38bdf8','Title':'#fb923c','SERP Presentation':'#2dd4bf','Diversity':'#c084fc','Images':'#a3e635','Brand':'#f87171'} %}
+    {% set gp = namespace(seen=[]) %}
+    {% for c in correlations %}{% if c.group and c.group not in gp.seen %}{% set _ = gp.seen.append(c.group) %}{% endif %}{% endfor %}
+
+    <div class="corr-bar">
+      <div class="fgroups">
+        <button type="button" class="fpill active" data-g="__all">All factors</button>
+        {% for g in gp.seen %}
+        <button type="button" class="fpill" data-g="{{ g }}" style="--gc:{{ GCOLORS.get(g,'#8a96ab') }}"><span class="gdot"></span>{{ g }}</button>
+        {% endfor %}
+      </div>
+      <div class="corr-bar-right">
+        {% if has_target %}<label class="toggle"><input type="checkbox" id="hideMet"> Hide on-target</label>{% endif %}
+        <span class="corr-count" id="corrCount"></span>
+        <button type="button" class="nextg" id="nextGroup">Next group ▸</button>
+      </div>
+    </div>
+    {% if has_target %}
+    <div class="corr-legend">
+      <span><i class="lg under"></i>▲ More — you're below the page-1 norm, add</span>
+      <span><i class="lg over"></i>▼ Less — you exceed the norm, reduce</span>
+      <span><i class="lg met"></i>✓ Good — on target</span>
+    </div>
+    {% endif %}
+
+    <div class="tbl-wrap">
+    <table id="corrTable">
+      <thead><tr>
+        <th data-k="name" data-t="s">Factor <span class="ar">▲▼</span></th>
+        <th data-k="group" data-t="s">Group <span class="ar">▲▼</span></th>
+        <th data-k="corr" data-t="n">Correlation <span class="ar">▲▼</span></th>
+        <th data-k="p1" data-t="n">Page-1 avg <span class="ar">▲▼</span></th>
+        {% if has_target %}<th data-k="you" data-t="n">Your value <span class="ar">▲▼</span></th>
+        <th data-k="status" data-t="n">Status <span class="ar">▲▼</span></th>{% endif %}
+        <th data-k="sig" data-t="n">Sig <span class="ar">▲▼</span></th>
+      </tr></thead>
+      <tbody>
+      {% for c in correlations %}
+        {% set bob = c.best_of_both if c.best_of_both is not none else 0 %}
+        {% set strength = c.best_of_both|pct_strength %}
+        {% if not c.significant %}{% set cls = 'mut' %}
+        {% elif bob >= 0 %}{% set cls = 'pos' %}
+        {% else %}{% set cls = 'neg' %}{% endif %}
+        {% set status = 'na' %}{% set sev = 0 %}{% set avg = c.page1_avg %}{% set you = c.target_value %}
+        {% if has_target and c.significant and avg is not none and you is not none %}
+          {% set tol = (avg|abs) * 0.12 %}
+          {% if (you - avg)|abs <= tol %}{% set status = 'met' %}{% set sev = 1 %}
+          {% elif c.direction == 'more_is_better' %}{% if you < avg %}{% set status = 'under' %}{% set sev = 3 %}{% else %}{% set status = 'met' %}{% set sev = 1 %}{% endif %}
+          {% elif c.direction == 'less_is_better' %}{% if you > avg %}{% set status = 'over' %}{% set sev = 3 %}{% else %}{% set status = 'met' %}{% set sev = 1 %}{% endif %}
+          {% else %}{% set status = 'off' %}{% set sev = 2 %}{% endif %}
+        {% endif %}
+        <tr data-group="{{ c.group }}" data-status="{{ status }}">
+          <td class="fname" data-name="{{ c.name }}">{{ c.name }}</td>
+          <td class="grp" data-group="{{ c.group }}"><span class="gpill" style="--gc:{{ GCOLORS.get(c.group,'#8a96ab') }}"><span class="gdot"></span>{{ c.group }}</span></td>
+          <td data-corr="{{ bob }}">
+            <div class="sbar">
+              <div class="t"><div class="f {{ cls }}" style="width:{{ strength }}%"></div></div>
+              <div class="v {{ cls if cls != 'mut' else '' }}">{{ '%+.2f'|format(bob) }}</div>
+            </div>
+          </td>
+          <td data-p1="{{ c.page1_avg if c.page1_avg is not none else -999999 }}">{{ c.page1_avg|fmt }}</td>
+          {% if has_target %}<td class="youcell {{ status }}" data-you="{{ c.target_value if c.target_value is not none else -999999 }}">{{ c.target_value|fmt }}</td>
+          <td class="stcell" data-sev="{{ sev }}" data-status="{{ status }}">
+            {% if status == 'under' %}<span class="statp under" title="Below the page-1 norm — add more">▲ More <span class="d">+{{ (avg - you)|fmt }}</span></span>
+            {% elif status == 'over' %}<span class="statp over" title="Above the page-1 norm — reduce">▼ Less <span class="d">−{{ (you - avg)|fmt }}</span></span>
+            {% elif status == 'off' %}<span class="statp off" title="Off the page-1 norm">≠ Off</span>
+            {% elif status == 'met' %}<span class="statp met" title="Matches the page-1 norm">✓ Good</span>
+            {% else %}<span class="dim">—</span>{% endif %}
+          </td>{% endif %}
+          <td data-sig="{{ 1 if c.significant else 0 }}">{% if c.significant %}<span class="ok">✓</span>{% else %}<span class="dim">·</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if serp.items %}
+  <div class="card reveal" id="sec-serp">
+    <div class="card-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+      <h2>Live SERP</h2>
+      <span class="sub">{{ serp.source }}{% if serp.snapshot_date %} · {{ serp.snapshot_date }}{% endif %}</span>
+    </div>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="no-sort" style="cursor:default">#</th><th class="no-sort" style="cursor:default">Domain</th><th class="no-sort" style="cursor:default">Title &amp; URL</th></tr></thead>
+      <tbody>
+      {% for it in serp.items %}
+        <tr>
+          <td><span class="serp-rank {{ 'top' if it.rank <= 3 else '' }}">{{ it.rank }}</span></td>
+          <td class="serp-dom">{{ it.domain }}</td>
+          <td>
+            <div class="serp-title">{{ it.title or '(no title)' }}</div>
+            <div class="serp-url"><a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.url }}</a></div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="foot">
+    <b>Methodology &amp; caveats.</b>
+    This report ranks on-page factors by their <b>correlation</b> with position across the top-{{ report.n_pages_analyzed }} organic results for
+    “{{ request.keyword }}”. A factor is flagged <b>significant</b> when |r| exceeds the sample's critical value
+    (|r| &gt; {{ '%.2f'|format(report.significance_threshold) }}). Correlation is <b>not causation</b> — a strong factor describes what top pages
+    share, not a guaranteed lever. The sample is small ({{ report.n_pages_analyzed }} pages), so treat directional signals over precise targets.
+    Only an on-page <b>subset</b> of factors is measured; authority / entity / backlink factors are excluded unless explicitly enabled.
+  </div>
+
+  <div class="sig">Generated by RankLens · a transparent, modern alternative to legacy Cora exports</div>
+
+</div>
+
+<script>
+(function(){
+  var tb=document.getElementById('corrTable');
+  if(!tb)return;
+  var tbody=tb.tBodies[0];
+  var heads=tb.tHead.rows[0].cells;
+  function val(row,i,type){
+    var c=row.cells[i];
+    if(type==='n'){
+      var d=c.getAttribute('data-corr')||c.getAttribute('data-p1')||c.getAttribute('data-you')||c.getAttribute('data-sev')||c.getAttribute('data-sig');
+      if(d!==null)return parseFloat(d);
+      return parseFloat((c.textContent||'').replace(/[^0-9.\-]/g,''))||0;
+    }
+    return (c.textContent||'').trim().toLowerCase();
+  }
+  var state={i:-1,dir:1};
+  for(var i=0;i<heads.length;i++){
+    if(heads[i].classList.contains('no-sort'))continue;
+    (function(idx,type){
+      heads[idx].addEventListener('click',function(){
+        state.dir=(state.i===idx)?-state.dir:1;state.i=idx;
+        var rows=Array.prototype.slice.call(tbody.rows);
+        rows.sort(function(a,b){
+          var x=val(a,idx,type),y=val(b,idx,type);
+          if(x<y)return -1*state.dir;if(x>y)return 1*state.dir;return 0;
+        });
+        rows.forEach(function(r){tbody.appendChild(r);});
+      });
+    })(i,heads[i].getAttribute('data-t'));
+  }
+})();
+/* ---- correlation table: group filter + hide-on-target + next-group cycler ---- */
+(function(){
+  var tb=document.getElementById('corrTable');
+  if(!tb)return;
+  var tbody=tb.tBodies[0];
+  var pills=Array.prototype.slice.call(document.querySelectorAll('.corr-bar .fpill'));
+  var hideMet=document.getElementById('hideMet');
+  var nextBtn=document.getElementById('nextGroup');
+  var countEl=document.getElementById('corrCount');
+  var activeG='__all';
+  function apply(){
+    var rows=tbody.rows,shown=0,total=rows.length;
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i];
+      var g=r.getAttribute('data-group')||'';
+      var st=r.getAttribute('data-status')||'';
+      var ok=(activeG==='__all'||g===activeG)&&!(hideMet&&hideMet.checked&&st==='met');
+      r.style.display=ok?'':'none';
+      if(ok)shown++;
+    }
+    if(countEl)countEl.textContent=shown+' of '+total+' shown';
+  }
+  function setActive(g){
+    activeG=g;
+    pills.forEach(function(p){p.classList.toggle('active',p.getAttribute('data-g')===g);});
+    apply();
+  }
+  pills.forEach(function(p){p.addEventListener('click',function(){setActive(p.getAttribute('data-g'));});});
+  if(hideMet)hideMet.addEventListener('change',apply);
+  if(nextBtn)nextBtn.addEventListener('click',function(){
+    var order=pills.map(function(p){return p.getAttribute('data-g');});
+    if(!order.length)return;
+    var idx=order.indexOf(activeG);
+    setActive(order[(idx+1)%order.length]);
+    var card=tb.closest('.card');
+    if(card&&card.scrollIntoView)card.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  apply();
+})();
+/* ---- Referring-domains viewer: one color-coded ranking page at a time ---- */
+(function(){
+  var tb=document.getElementById('blTable');
+  if(!tb)return;
+  var pages=Array.prototype.slice.call(tb.querySelectorAll('tbody.bl-page'));
+  if(!pages.length)return;
+  var prev=document.getElementById('blPrev');
+  var next=document.getElementById('blNext');
+  var frame=document.getElementById('blFrame');
+  var banner=document.getElementById('blBanner');
+  var PAL=[
+    ['#6d6cf2','109,108,242'],['#2dd4bf','45,212,191'],
+    ['#f59e0b','245,158,11'],['#ec4899','236,72,153'],
+    ['#22c55e','34,197,94'],['#38bdf8','56,189,248'],
+    ['#a78bfa','167,139,250'],['#f87171','248,113,113']
+  ];
+  function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var i=0;
+  function show(n){
+    i=(n%pages.length+pages.length)%pages.length;
+    pages.forEach(function(p,k){p.style.display=(k===i)?'':'none';});
+    var p=pages[i];
+    var dom=p.getAttribute('data-dom')||'';
+    var rank=p.getAttribute('data-rank');
+    var isTgt=p.getAttribute('data-target')==='1';
+    var c=p.getAttribute('data-count')||'0';
+    var col=PAL[i%PAL.length];
+    if(frame){
+      frame.style.setProperty('--bl-accent',col[0]);
+      frame.style.setProperty('--bl-soft','rgba('+col[1]+',.10)');
+      frame.style.setProperty('--bl-line','rgba('+col[1]+',.32)');
+    }
+    if(banner){
+      banner.innerHTML=(isTgt?'<span class="brand-yb">YOU</span>':'')
+        +'<span class="dom">'+esc(dom)+'</span>'
+        +'<span class="meta">'+(rank?'SERP #'+esc(rank)+' · ':'')
+        +'page '+(i+1)+' of '+pages.length+' · '
+        +c+' referring domain'+(c==='1'?'':'s')+'</span>';
+    }
+  }
+  if(prev)prev.addEventListener('click',function(){show(i-1);});
+  if(next)next.addEventListener('click',function(){show(i+1);});
+  show(0);
+})();
+/* ---- EAV table: attribute filter + prev/next cycler + gap banner ---- */
+(function(){
+  var tbody=document.getElementById('eavBody');
+  var pillBox=document.getElementById('eavPills');
+  if(!tbody||!pillBox)return;
+  var rows=Array.prototype.slice.call(tbody.rows);
+  var countEl=document.getElementById('eavCount');
+  var banner=document.getElementById('eavBanner');
+  var prevBtn=document.getElementById('eavPrev');
+  var nextBtn=document.getElementById('eavNext');
+  var MISS={missing_attribute:1,missing_value:1,missing_entity:1};
+  function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  /* gather per-attribute stats, then order most-common-first */
+  var stats={},order=[];
+  rows.forEach(function(r){
+    var a=r.getAttribute('data-attr')||'';
+    if(!a)return;
+    if(!stats[a]){stats[a]={attr:a,count:0,miss:0,off:0,missEnts:[]};order.push(a);}
+    var s=stats[a];s.count++;
+    var g=r.getAttribute('data-gap')||'';
+    if(MISS[g]){s.miss++;s.missEnts.push(r.getAttribute('data-entity')||'?');}
+    else if(g==='off_consensus'){s.off++;}
+  });
+  order.sort(function(x,y){return stats[y].count-stats[x].count||stats[y].miss-stats[x].miss||(x<y?-1:1);});
+
+  var pills=[],activeG='__all';
+  function mkPill(g,inner,gapN){
+    var b=document.createElement('button');
+    b.type='button';b.className='fpill';b.setAttribute('data-g',g);
+    b.innerHTML=inner+(gapN?' <span class="pgap">✗'+gapN+'</span>':'');
+    b.addEventListener('click',function(){setActive(g);});
+    pillBox.appendChild(b);pills.push(b);
+  }
+  mkPill('__all','All attributes',0);
+  order.forEach(function(a){
+    mkPill(a,esc(a)+' <span class="pn">'+stats[a].count+'</span>',stats[a].miss);
+  });
+
+  function renderBanner(){
+    if(!banner)return;
+    if(activeG==='__all'){
+      var tMiss=0,tOff=0;order.forEach(function(a){tMiss+=stats[a].miss;tOff+=stats[a].off;});
+      banner.className='eav-gap-banner '+(tMiss?'has-gap':(tOff?'has-off':'ok'));
+      banner.innerHTML='<span class="egb-lab '+(tMiss?'miss':(tOff?'off':'ok'))+'">'+
+        (tMiss?'✗ '+tMiss+' attribute claims you’re missing across '+order.length+' attributes'
+              :'✓ you cover every attribute claim')+'</span>'+
+        (tOff?'<span class="egb-off">⚠ '+tOff+' off consensus</span>':'');
+      return;
+    }
+    var s=stats[activeG];if(!s){banner.innerHTML='';banner.className='eav-gap-banner';return;}
+    var html='<span class="egb-attr">'+esc(s.attr)+'</span><span class="egb-meta">'+s.count+' entit'+(s.count===1?'y':'ies')+' assert this</span>';
+    if(s.miss){
+      html+='<div class="egb-row"><span class="egb-lab miss">✗ you’re missing it on '+s.miss+' of '+s.count+'</span><span class="ent-chips">';
+      s.missEnts.forEach(function(e){html+='<span class="ent-chip">'+esc(e)+'</span>';});
+      html+='</span></div>';
+    } else {
+      html+='<div class="egb-row"><span class="egb-lab ok">✓ you cover all '+s.count+'</span></div>';
+    }
+    if(s.off)html+='<div class="egb-row"><span class="egb-lab off">⚠ '+s.off+' off consensus — your value differs</span></div>';
+    banner.className='eav-gap-banner '+(s.miss?'has-gap':(s.off?'has-off':'ok'));
+    banner.innerHTML=html;
+  }
+  function apply(){
+    var shown=0;
+    rows.forEach(function(r){
+      var ok=(activeG==='__all'||r.getAttribute('data-attr')===activeG);
+      r.style.display=ok?'':'none';if(ok)shown++;
+    });
+    pills.forEach(function(p){p.classList.toggle('active',p.getAttribute('data-g')===activeG);});
+    if(countEl)countEl.textContent=shown+' of '+rows.length+' claims';
+    renderBanner();
+  }
+  function setActive(g){activeG=g;apply();}
+  function step(d){
+    var ord=pills.map(function(p){return p.getAttribute('data-g');});
+    if(!ord.length)return;
+    var idx=ord.indexOf(activeG);
+    setActive(ord[(idx+d+ord.length)%ord.length]);
+    var bar=document.getElementById('eavBar');
+    if(bar&&bar.scrollIntoView)bar.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  if(prevBtn)prevBtn.addEventListener('click',function(){step(-1);});
+  if(nextBtn)nextBtn.addEventListener('click',function(){step(1);});
+
+  /* default to the most-common attribute so gaps surface immediately */
+  setActive(order.length?order[0]:'__all');
+})();
+/* ---- writing brief: copy the LLM prompt ---- */
+(function(){
+  var btn=document.getElementById('briefCopy');
+  var pre=document.getElementById('briefPrompt');
+  if(!btn||!pre)return;
+  btn.addEventListener('click',function(){
+    var txt=pre.textContent||'';
+    function done(){btn.textContent='Copied ✓';btn.classList.add('done');
+      setTimeout(function(){btn.textContent='Copy prompt';btn.classList.remove('done');},1800);}
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done,fallback);
+    }else{fallback();}
+    function fallback(){
+      var ta=document.createElement('textarea');
+      ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');done();}catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+})();
+/* ---- orchestrated reveal, reading progress, active section nav, gauge draw ---- */
+(function(){
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var cards=Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+
+  // Scroll-reveal cards (staggered by proximity); fall back to visible if no IO.
+  if('IntersectionObserver' in window && !reduce){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    },{rootMargin:'0px 0px -8% 0px',threshold:0});
+    cards.forEach(function(c){io.observe(c);});
+  } else {
+    cards.forEach(function(c){c.classList.add('in');});
+  }
+
+  // Reading-progress bar.
+  var bar=document.getElementById('readbar');
+  if(bar){
+    var tick=function(){
+      var h=document.documentElement;
+      var max=h.scrollHeight-h.clientHeight;
+      bar.style.width=(max>0?(h.scrollTop/max*100):0)+'%';
+    };
+    window.addEventListener('scroll',tick,{passive:true});
+    window.addEventListener('resize',tick);tick();
+  }
+
+  // Active section highlight in the top nav.
+  var links=Array.prototype.slice.call(document.querySelectorAll('.tb-nav a'));
+  if(links.length && 'IntersectionObserver' in window){
+    var byId={};
+    links.forEach(function(a){byId[a.getAttribute('href').slice(1)]=a;});
+    var navIO=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          links.forEach(function(a){a.classList.remove('active');});
+          var a=byId[e.target.id]; if(a)a.classList.add('active');
+        }
+      });
+    },{rootMargin:'-45% 0px -50% 0px',threshold:0});
+    Object.keys(byId).forEach(function(id){var s=document.getElementById(id);if(s)navIO.observe(s);});
+  }
+
+  // Gauge: draw the score ring in from empty on load.
+  var ring=document.querySelector('.gauge svg circle:last-of-type');
+  if(ring && !reduce){
+    var finalOff=ring.getAttribute('stroke-dashoffset');
+    var full=ring.getAttribute('stroke-dasharray');
+    ring.setAttribute('stroke-dashoffset',full);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){ring.setAttribute('stroke-dashoffset',finalOff);});});
+  }
+
+  // Strength/relevance bars: grow from zero on load.
+  if(!reduce){
+    var bars=Array.prototype.slice.call(document.querySelectorAll('.sbar .f,.track .cur'));
+    bars.forEach(function(f){
+      var w=f.style.width; if(!w)return;
+      f.style.width='0%';
+      requestAnimationFrame(function(){requestAnimationFrame(function(){f.style.width=w;});});
+    });
+  }
+})();
+</script>
+</body>
+</html>
