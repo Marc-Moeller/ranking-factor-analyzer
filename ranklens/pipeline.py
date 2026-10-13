@@ -44,6 +44,7 @@ from ranklens.models import (
     CompareRequest,
     PageEntities,
     PageFactors,
+    Serp,
     blank_request_byok,
 )
 
@@ -203,7 +204,7 @@ async def _entity_pass(
 # --------------------------------------------------------------------------- #
 # ANALYZE — live Cora-style on-page correlation
 # --------------------------------------------------------------------------- #
-async def run_analyze(request: AnalyzeRequest, with_ai: bool = True) -> AnalyzeReport:
+async def run_analyze(request: AnalyzeRequest, with_ai: bool = True, *, provided_serp: Serp | None = None) -> AnalyzeReport:
     settings = settings_for_analyze(request)
     # Secrets live on the per-run Settings copy only. Drop them from the request
     # so AnalyzeReport.request (and anything that dumps it) never carries them.
@@ -212,34 +213,45 @@ async def run_analyze(request: AnalyzeRequest, with_ai: bool = True) -> AnalyzeR
     timings: dict[str, float] = {}
 
     max_pages = request.max_pages or settings.ranklens_max_pages
-    vset = build_variation_set(request.keyword)
+    vset = build_variation_set(request.keyword, request.language)
 
     # 1) SERP. The configured SERP provider only returns one page (~10 organic)
     #    — too few for a stable correlation. "auto" tries it, then falls back
     #    to DataForSEO live advanced (full depth) when that source is too shallow.
     ts = time.perf_counter()
     serp_cost = 0.0
-    serp = None
-    if request.serp_source in ("auto", "serpmaster"):
-        try:
-            serp = await fetch_serp(request.keyword, country=request.country, num=max_pages, settings=settings)
-        except Exception:
-            serp = None
-    need_deep = request.serp_source == "dataforseo" or (
-        request.serp_source == "auto" and (serp is None or len(serp.items) < 25)
-    )
-    if need_deep:
-        try:
-            deep, serp_cost = await live_serp_advanced(
-                request.keyword, depth=max_pages, country=request.country,
-                language=request.language, settings=settings,
-            )
-            if deep.items and (serp is None or len(deep.items) >= len(serp.items)):
-                serp = deep
-        except Exception:
-            if serp is None:
-                raise
-    serp.language = request.language
+    if provided_serp is not None:
+        if (provided_serp.keyword != request.keyword
+                or provided_serp.country.lower() != request.country.lower()
+                or provided_serp.language.lower() != request.language.lower()):
+            raise ValueError("Saved SERP keyword, country and language must match the analysis request.")
+        if not provided_serp.items:
+            raise ValueError("Saved SERP contains no organic results.")
+        serp = provided_serp.model_copy(deep=True)
+    else:
+        serp = None
+        if request.serp_source in ("auto", "serpmaster"):
+            try:
+                serp = await fetch_serp(request.keyword, country=request.country, num=max_pages, settings=settings, language=request.language)
+            except Exception:
+                serp = None
+        need_deep = request.serp_source == "dataforseo" or (
+            request.serp_source == "auto" and (serp is None or len(serp.items) < max_pages)
+        )
+        if need_deep:
+            try:
+                deep, serp_cost = await live_serp_advanced(
+                    request.keyword, depth=max_pages, country=request.country,
+                    language=request.language, settings=settings,
+                )
+                if deep.items and (serp is None or len(deep.items) >= len(serp.items)):
+                    serp = deep
+            except Exception:
+                if serp is None:
+                    raise
+        if serp is None:
+            raise RuntimeError("No SERP returned by the selected source.")
+        serp.language = request.language
     serp.items = serp.items[:max_pages]
     timings["serp_ms"] = (time.perf_counter() - ts) * 1000
 
@@ -248,9 +260,8 @@ async def run_analyze(request: AnalyzeRequest, with_ai: bool = True) -> AnalyzeR
     fetch_list = list(serp_urls)
     target_in_serp_rank = None
     if request.target_url:
-        tdom = _domain(request.target_url)
         for it in serp.items:
-            if it.domain == tdom:
+            if it.url == request.target_url:
                 target_in_serp_rank = it.rank
                 break
         if request.target_url not in fetch_list:
@@ -317,7 +328,7 @@ async def run_analyze(request: AnalyzeRequest, with_ai: bool = True) -> AnalyzeR
                 target_factors.update(corpus_factors(tbody, vset, corpus))
                 # SERP factors for the target if it ranks
                 for it in serp.items:
-                    if it.domain == _domain(request.target_url):
+                    if it.url == request.target_url:
                         target_factors.update(serp_factors(it, vset))
                         break
                 target_factors["__url__"] = request.target_url  # type: ignore[assignment]
@@ -405,6 +416,7 @@ async def run_analyze(request: AnalyzeRequest, with_ai: bool = True) -> AnalyzeR
                 country=request.country,
                 settings=settings,
                 with_ai=with_ai,
+                language=request.language,
             )
         except Exception:
             topical_report = None
@@ -440,7 +452,7 @@ async def run_analyze(request: AnalyzeRequest, with_ai: bool = True) -> AnalyzeR
             # not an LLM call and runs alongside everything.
             crux_task = asyncio.ensure_future(crux_metrics(origins, settings))
             sem_r, int_r = await asyncio.gather(
-                analyze_semantic(request.keyword, serp.items, bodies_by_rank, settings),
+                analyze_semantic(request.keyword, serp.items, bodies_by_rank, settings, language=request.language),
                 analyze_intent(request.keyword, serp.items, bodies_by_rank, request.target_url, settings),
                 return_exceptions=True,
             )

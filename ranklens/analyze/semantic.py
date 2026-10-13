@@ -13,6 +13,7 @@ from ranklens.clients.entities import _first_balanced_object, _strip_fences
 from ranklens.clients.llm import chat, llm_unavailable
 from ranklens.config import Settings, get_settings
 from ranklens.models import SemanticReport, SerpItem, SubIntent
+from ranklens.language import stopwords, tokens
 
 PASSAGE_MIN_WORDS = 120  # Enough context to represent a coherent answer passage.
 PASSAGE_MAX_WORDS = 180  # Keeps long sections from diluting passage relevance.
@@ -26,7 +27,6 @@ OPEN_GAP_THRESHOLD = {"embeddings": 0.35, "tfidf": 0.08}
 MAX_SALIENT_TERMS = 40  # A compact corpus vocabulary remains actionable.
 CHAT_COST_USD = 0.0012
 
-_WORD_RE = re.compile(r"[a-z][a-z0-9']*")
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 _STOPWORDS = {
     "a", "about", "after", "all", "also", "an", "and", "any", "are", "as",
@@ -109,17 +109,17 @@ def _passages(body: str) -> list[str]:
     return passages[:MAX_PASSAGES_PER_PAGE]
 
 
-def _tokens(text: str) -> list[str]:
-    return [token for token in _WORD_RE.findall((text or "").lower()) if token not in _STOPWORDS]
+def _tokens(text: str, language: str = "en") -> list[str]:
+    return [token for token in tokens(text) if not token.isdigit() and token not in stopwords(language, _STOPWORDS)]
 
 
-def _features(text: str) -> list[str]:
-    tokens = _tokens(text)
-    return tokens + [f"{a} {b}" for a, b in zip(tokens, tokens[1:])]
+def _features(text: str, language: str = "en") -> list[str]:
+    words = _tokens(text, language)
+    return words + [f"{a} {b}" for a, b in zip(words, words[1:])]
 
 
-def _tfidf_matrix(texts: list[str]) -> np.ndarray:
-    documents = [Counter(_features(text)) for text in texts]
+def _tfidf_matrix(texts: list[str], language: str = "en") -> np.ndarray:
+    documents = [Counter(_features(text, language)) for text in texts]
     vocabulary = sorted({term for document in documents for term in document})
     if not vocabulary:
         return np.zeros((len(texts), 0), dtype=float)
@@ -205,13 +205,14 @@ def _parse_sub_intents(reply: str, keyword: str) -> list[SubIntent]:
     return [SubIntent(name=keyword, description="The searcher's primary query.")]
 
 
-async def _fan_out(keyword: str, settings: Settings) -> list[SubIntent]:
+async def _fan_out(keyword: str, settings: Settings, language: str = "en") -> list[SubIntent]:
     messages = [
         {
             "role": "system",
             "content": (
                 "Decompose a search query into 5-10 distinct sub-intents a useful page should cover. "
-                "Return only a JSON list of objects with string fields name and description."
+                "Return only a JSON list of objects with string fields name and description. "
+                f"Write names and descriptions in the query language ({language})."
             ),
         },
         {"role": "user", "content": f"Search query: {keyword}"},
@@ -231,12 +232,12 @@ async def _fan_out(keyword: str, settings: Settings) -> list[SubIntent]:
     return [SubIntent(name=keyword, description="The searcher's primary query.")]
 
 
-def _salient_terms(keyword: str, bodies_by_rank: dict[int, str]) -> list[str]:
+def _salient_terms(keyword: str, bodies_by_rank: dict[int, str], language: str = "en") -> list[str]:
     ranked = [bodies_by_rank[rank] for rank in sorted(bodies_by_rank) if 1 <= rank <= 10]
-    keywordless_documents = [Counter(_features(body)) for body in ranked if body.strip()]
+    keywordless_documents = [Counter(_features(body, language)) for body in ranked if body.strip()]
     if not keywordless_documents:
         return []
-    keyword_tokens = set(_tokens(keyword))
+    keyword_tokens = set(_tokens(keyword, language))
     document_frequency = Counter(term for doc in keywordless_documents for term in doc)
     scores: dict[str, float] = {}
     for term in document_frequency:
@@ -253,6 +254,7 @@ async def analyze_semantic(
     serp_items: list[SerpItem],
     bodies_by_rank: dict[int, str],
     settings: Settings | None = None,
+    language: str = "en",
 ) -> tuple[SemanticReport | None, dict[int, dict[str, float]]]:
     """Analyze page passages against the query and its searcher sub-intents.
 
@@ -272,7 +274,7 @@ async def analyze_semantic(
         keyword = (keyword or "").strip()
         if not keyword:
             return None, {}
-        sub_intents = await _fan_out(keyword, settings)
+        sub_intents = await _fan_out(keyword, settings, language)
         passages_by_rank = {
             int(rank): _passages(body)
             for rank, body in bodies_by_rank.items()
@@ -289,7 +291,7 @@ async def analyze_semantic(
         matrix = _normalized_matrix(vectors) if vectors is not None else None
         method = "embeddings"
         if matrix is None or matrix.shape[0] != len(all_texts):
-            matrix = _tfidf_matrix(all_texts)
+            matrix = _tfidf_matrix(all_texts, language)
             method = "tfidf"
 
         query_vectors = matrix[: len(query_texts)]
@@ -323,10 +325,10 @@ async def analyze_semantic(
             if max((page.get(intent.name, 0.0) for page in coverage.values()), default=0.0)
             < gap_threshold
         ] if len(sub_intents) > 1 else []
-        salient_terms = _salient_terms(keyword, bodies_by_rank)
+        salient_terms = _salient_terms(keyword, bodies_by_rank, language)
         factors: dict[int, dict[str, float]] = {}
         for rank in sorted(passages_by_rank):
-            body_features = set(_features(bodies_by_rank.get(rank, "")))
+            body_features = set(_features(bodies_by_rank.get(rank, ""), language))
             salient_coverage = (
                 100.0 * sum(term in body_features for term in salient_terms) / len(salient_terms)
                 if salient_terms else 0.0

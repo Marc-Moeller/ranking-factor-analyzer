@@ -16,13 +16,9 @@ from urllib.parse import urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 from ..keywords import split_sentences, word_count
+from ..language import QUESTION_WORDS, language_code, tokens
 from .schema import schema_factors
 
-# heading-level question starters
-_QUESTION_WORDS = (
-    "who", "what", "when", "where", "why", "how", "which",
-    "can", "do", "does", "is", "are",
-)
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _SOCIAL_HOSTS = (
     "facebook.com", "instagram.com", "twitter.com", "x.com", "youtube.com",
@@ -106,7 +102,12 @@ def extract_html_factors(
     clean_body_text = ""
     try:
         body_soup = BeautifulSoup(html, "lxml")
-        for tag in body_soup.find_all(_STRIP_TAGS):
+        for tag in body_soup.find_all(_STRIP_TAGS + ("nav", "footer", "head")):
+            tag.decompose()
+        for tag in body_soup.find_all("header"):
+            if not tag.find_parent(("main", "article")):
+                tag.decompose()
+        for tag in body_soup.find_all(attrs={"role": _CHROME_ROLES_RE}):
             tag.decompose()
         clean_body_text = body_soup.get_text(" ", strip=True)
         clean_body_text = re.sub(r"\s+", " ", clean_body_text).strip()
@@ -173,8 +174,9 @@ def extract_html_factors(
                 return False
             if tl.endswith("?"):
                 return True
-            first = tl.split()[0] if tl.split() else ""
-            return first in _QUESTION_WORDS
+            words = tokens(tl)
+            first = words[0] if words else ""
+            return first in QUESTION_WORDS.get(language_code(getattr(vset, "language", "en")), ())
 
         factors["QUESTIONS_H1"] = float(sum(1 for t in headings[1] if _is_question(t)))
     except Exception:
@@ -264,13 +266,15 @@ def extract_html_factors(
     except Exception:
         factors["CLEAN_KW_DENSITY"] = 0.0
 
-    try:
-        ease, grade = _flesch(clean_body_text)
-        factors["FLESCH_EASE"] = float(ease)
-        factors["FLESCH_GRADE"] = float(grade)
-    except Exception:
-        factors["FLESCH_EASE"] = 0.0
-        factors["FLESCH_GRADE"] = 0.0
+    # These formulas are English-specific; omit unsupported measurements.
+    if language_code(getattr(vset, "language", "en")) == "en":
+        try:
+            ease, grade = _flesch(clean_body_text)
+            factors["FLESCH_EASE"] = float(ease)
+            factors["FLESCH_GRADE"] = float(grade)
+        except Exception:
+            factors["FLESCH_EASE"] = 0.0
+            factors["FLESCH_GRADE"] = 0.0
 
     try:
         off = vset.first_match_offset(html)

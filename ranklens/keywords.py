@@ -9,16 +9,16 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from ranklens.language import normalize_text, stopwords, tokens
 
 _STOP = {
     "the", "a", "an", "and", "or", "of", "to", "in", "for", "on", "with", "at",
     "by", "from", "is", "it", "as", "be", "are", "your", "you", "best", "top",
 }
-_WORD_RE = re.compile(r"[a-z0-9']+")
 
 
 def _tokens(text: str) -> list[str]:
-    return _WORD_RE.findall(text.lower())
+    return tokens(text)
 
 
 @dataclass(frozen=True)
@@ -27,54 +27,57 @@ class VariationSet:
     phrase: str                              # normalized exact phrase
     variations: tuple[str, ...] = field(default_factory=tuple)  # all variation strings
     _patterns: tuple = field(default_factory=tuple, repr=False)
+    language: str = "en"
 
     def count(self, text: str) -> int:
         """Total occurrences of any variation in text (case-insensitive)."""
         if not text:
             return 0
-        low = text.lower()
+        low = normalize_text(text)
         return sum(len(p.findall(low)) for p in self._patterns)
 
     def count_exact(self, text: str) -> int:
         if not text:
             return 0
-        return len(re.findall(re.escape(self.phrase), text.lower()))
+        return len(re.findall(re.escape(self.phrase), normalize_text(text)))
 
     def unique_used(self, text: str) -> int:
         """How many DISTINCT variations appear at least once."""
         if not text:
             return 0
-        low = text.lower()
+        low = normalize_text(text)
         return sum(1 for p in self._patterns if p.search(low))
 
     def starts_with_variation(self, text: str) -> bool:
         if not text:
             return False
-        low = text.strip().lower()
+        low = normalize_text(text).strip()
         return any(low.startswith(v) for v in self.variations)
 
     def first_match_offset(self, text: str) -> int | None:
         """Byte offset of the first variation occurrence, or None."""
         if not text:
             return None
-        low = text.lower()
+        low = normalize_text(text)
         best: int | None = None
         for p in self._patterns:
             m = p.search(low)
-            if m and (best is None or m.start() < best):
-                best = m.start()
+            if m:
+                offset = len(low[:m.start()].encode("utf-8"))
+                if best is None or offset < best:
+                    best = offset
         return best
 
 
-def build_variation_set(keyword: str) -> VariationSet:
-    kw = keyword.strip().lower()
+def build_variation_set(keyword: str, language: str = "en") -> VariationSet:
+    kw = normalize_text(keyword).strip()
     toks = _tokens(kw)
     phrase = " ".join(toks)
 
     variations: set[str] = set()
     if phrase:
         variations.add(phrase)
-    content_toks = [t for t in toks if t not in _STOP and len(t) > 2]
+    content_toks = [t for t in toks if t not in stopwords(language, _STOP) and len(t) > 2]
     variations.update(content_toks)
     # contiguous bigrams + trigrams of the full token list
     for n in (2, 3):
@@ -89,7 +92,7 @@ def build_variation_set(keyword: str) -> VariationSet:
     # longest first so multi-word grams match before single tokens when iterating
     ordered = tuple(sorted(variations, key=lambda s: (-len(s), s)))
     patterns = tuple(re.compile(r"\b" + re.escape(v) + r"\b") for v in ordered)
-    return VariationSet(keyword=keyword, phrase=phrase, variations=ordered, _patterns=patterns)
+    return VariationSet(keyword=keyword, phrase=phrase, variations=ordered, _patterns=patterns, language=language)
 
 
 def word_count(text: str) -> int:

@@ -57,7 +57,7 @@ correlation table and the writing brief. You need a SERP source to get the pages
 
 ```bash
 python -m ranklens.cli analyze "your keyword" \
-  --no-funnel --no-entities --no-topical
+  --no-funnel --no-entities --no-topical --no-ai
 ```
 
 Everything below is additive.

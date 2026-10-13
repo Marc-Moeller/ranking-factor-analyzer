@@ -13,17 +13,9 @@ Cora derives LSI words and IDF from the 100-page ranking corpus. We approximate:
 from __future__ import annotations
 
 import math
-import re
 from collections import Counter
 
-# reuse the exact tokenizer the keyword module uses
-_TOKEN_RE = re.compile(r"[a-z0-9']+")
-
-
-def _tokens(text: str) -> list[str]:
-    if not text:
-        return []
-    return _TOKEN_RE.findall(text.lower())
+from ranklens.language import stopwords, tokens as _tokens
 
 
 # small, self-contained stoplist (kept here so corpus has no external dep)
@@ -105,7 +97,7 @@ def build_corpus(body_texts: list[str], vset) -> Corpus:
     for term, freq in df.items():
         if freq < lo or freq > hi:
             continue
-        if term in _STOPLIST:
+        if term in stopwords(getattr(vset, "language", "en"), _STOPLIST):
             continue
         if term in var_tokens:
             continue

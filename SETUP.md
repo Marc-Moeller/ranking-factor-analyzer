@@ -101,10 +101,61 @@ python -m ranklens.cli analyze "cordless impact driver" --url https://example.co
 Set `DATABASE_URL`, or the individual `POSTGRES_*` variables, whichever you prefer. An
 explicit `DATABASE_URL` wins.
 
+### Multilingual analysis
+
+Select the search market with `--country` and override its conventional default
+language with `--language` when needed. For example:
+
+```bash
+python -m ranklens.cli analyze "gulvlægger pris" --country dk --url https://example.dk/gulve
+python -m ranklens.cli analyze "pompe à chaleur" --country fr --url https://example.fr/chauffage
+python -m ranklens.cli analyze "isolation maison" --country ca --language fr
+```
+
+Country-level DataForSEO codes cover 64 markets across Europe, the Americas and
+the existing English-language markets. See `ranklens/markets.py` for the complete
+list. Defaults include da for Denmark, de for Germany, fr for France, es for
+Spain/Mexico, pt for Portugal/Brazil and nb for Norway. Explicit overrides are
+useful in multilingual countries such as Canada, Belgium and Switzerland.
+Unsupported countries raise an error instead of silently selecting US results.
+
+Keyword, corpus, semantic fallback and topical matching share Unicode-aware
+word handling. Bundled offline stopword lists cover 28 European languages plus
+the existing English rules. Question-heading detection uses localized starter
+words. Regional tags select base-language lexical rules; the chosen provider
+must also support any tag sent to it. See `ranklens/data/README.md` for the
+language list, attribution and limitations.
+
+This is support for SERP selection and lexical measurements. Report labels
+remain English, and the existing language-dependent trust/AI heuristics have
+not been comprehensively localized. English Flesch measurements are omitted
+for other languages. Stemming, compound splitting and advanced grammatical
+analysis are not implemented. Languages without bundled stopwords retain
+Unicode word handling and do not inherit English stopword filtering.
+
+### Use an existing SERP snapshot
+
+`--serp-file` accepts the `Serp` JSON model and makes no SERP-provider lookup.
+The keyword, country and language must match the request. This supports data
+exported from an existing research service without sharing its provider credentials.
+The snapshot contains `keyword`, `country`, `language`, `source`, and `items`;
+each item has `rank`, `url`, `domain`, and optionally `title`, `snippet`, `displayed_url`.
+Keep the capture timestamp and original archive reference with your export.
+
+```bash
+python -m ranklens.cli analyze "gulvlægger pris" --country dk --serp-file serp.json \
+  --no-store --no-funnel --no-entities --no-topical --no-ai
+```
+
+`--no-store` saves the self-contained HTML report without requiring PostgreSQL.
+It does not disable page fetching or optional enrichment. Disable those extra
+layers explicitly as shown above if you want a deterministic run with no extra
+provider calls. Imported SERP acquisition costs are not added to the new run cost.
+
 ### Run it with no LLM at all
 
 ```bash
-python -m ranklens.cli analyze "your keyword" --no-funnel --no-entities --no-topical
+python -m ranklens.cli analyze "your keyword" --no-funnel --no-entities --no-topical --no-ai
 ```
 
 ---
@@ -152,7 +203,7 @@ credentials.
 
 Runs with the full profile (entities + topical + funnel) commonly take **25 to 35 minutes**.
 Set your client's timeout accordingly — a short poll ceiling will time out a run that was
-going to succeed. A deterministic run with `--no-funnel --no-entities --no-topical` finishes
+going to succeed. A deterministic run with `--no-funnel --no-entities --no-topical --no-ai` finishes
 in a couple of minutes.
 
 ---

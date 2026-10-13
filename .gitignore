@@ -5,9 +5,12 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
-data/
+/data/
 *.xlsx
 *.sqlite
 *.db
 .pytest_cache/
 .ruff_cache/
+*.egg-info/
+build/
+dist/

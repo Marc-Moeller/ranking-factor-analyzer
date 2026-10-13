@@ -26,6 +26,7 @@ async def fetch_serp(
     country: str = "us",
     num: int = 20,
     settings: Settings | None = None,
+    language: str = "en",
 ) -> Serp:
     """Fetch a live top-N organic SERP for ``keyword`` from the configured SERP provider.
 
@@ -53,7 +54,7 @@ async def fetch_serp(
         "X-API-Key": settings.serp_api_key,
         "Content-Type": "application/json",
     }
-    body = {"query": keyword, "gl": country, "num": num}
+    body = {"query": keyword, "gl": country, "hl": language, "num": num}
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(url, headers=headers, json=body)
@@ -99,6 +100,7 @@ async def fetch_serp(
     return Serp(
         keyword=keyword,
         country=country,
+        language=language,
         source="serp-api",
         items=items,
     )

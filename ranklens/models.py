@@ -13,7 +13,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from ranklens.language import default_language
 
 
 # Credential / provider fields that may arrive on AnalyzeRequest as BYOK
@@ -50,7 +52,16 @@ def _now() -> datetime:
 # --------------------------------------------------------------------------- #
 # Requests
 # --------------------------------------------------------------------------- #
-class AnalyzeRequest(BaseModel):
+class MarketRequest(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def infer_language(cls, values):
+        if isinstance(values, dict) and values.get("language") is None:
+            values = {**values, "language": default_language(values.get("country") or "us")}
+        return values
+
+
+class AnalyzeRequest(MarketRequest):
     """Live Cora-style analysis: one keyword, an optional target URL to grade."""
     keyword: str
     target_url: Optional[str] = None
@@ -75,7 +86,7 @@ class AnalyzeRequest(BaseModel):
     crux_api_key: Optional[str] = None
 
 
-class CompareRequest(BaseModel):
+class CompareRequest(MarketRequest):
     """Before/after an algorithm update for one keyword."""
     keyword: str
     update_date: str                  # ISO date, rollout start (the 'before' cutoff)

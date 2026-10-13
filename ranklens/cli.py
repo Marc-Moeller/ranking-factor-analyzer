@@ -13,6 +13,7 @@ import asyncio
 import re
 import sys
 import uuid
+from pathlib import Path
 import webbrowser
 from datetime import datetime, timezone
 
@@ -23,6 +24,7 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
+from ranklens.language import default_language
 from ranklens.config import get_settings
 from ranklens.models import (
     AnalyzeRequest,
@@ -30,6 +32,7 @@ from ranklens.models import (
     Run,
     RunKind,
     RunStatus,
+    Serp,
 )
 from ranklens.pipeline import run_analyze, run_compare
 from ranklens.report.html import render_analyze, render_compare, save_report
@@ -72,15 +75,19 @@ def cmd_analyze(args) -> None:
         include_backlinks=args.backlinks,
         include_brand=args.brand,
         include_entities=args.entities,
+        include_topical=not args.no_topical,
         include_funnel=not args.no_funnel,
     )
     print(f"→ Analyzing SERP for: {req.keyword!r}  (country={req.country}, pages={req.max_pages or settings.ranklens_max_pages})")
-    report = asyncio.run(run_analyze(req, with_ai=not args.no_ai))
+    saved_serp = None
+    if args.serp_file:
+        saved_serp = Serp.model_validate_json(Path(args.serp_file).read_text(encoding="utf-8"))
+    report = asyncio.run(run_analyze(req, with_ai=not args.no_ai, provided_serp=saved_serp))
 
     html = render_analyze(report)
     out = settings.data_dir / "reports" / f"analyze_{_slug(req.keyword)}_{_stamp()}.html"
     save_report(html, out)
-    run = _persist(RunKind.analyze, f'analyze: "{req.keyword}"', req.model_dump(mode="json"), report, RunStatus.done, None)
+    run = None if args.no_store else _persist(RunKind.analyze, f'analyze: "{req.keyword}"', req.model_dump(mode="json"), report, RunStatus.done, None)
 
     print(f"\n  Pages fetched OK : {report.pages_fetched_ok}/{report.n_pages_analyzed}")
     print(f"  Significance |r| > {report.significance_threshold:.3f}")
@@ -109,7 +116,8 @@ def cmd_analyze(args) -> None:
     print(f"\n  Top actions:")
     for r in report.recommendations[:6]:
         print(f"   • [{r.phase}] {r.name}: {r.action_text}")
-    print(f"\n  Run id: {run.id}")
+    if run is not None:
+        print(f"\n  Run id: {run.id}")
     print(f"  Report: {out}")
     if args.open:
         webbrowser.open(out.as_uri())
@@ -169,6 +177,7 @@ def cmd_topical(args) -> None:
         target_url=args.url,
         country=country,
         with_ai=not args.no_ai,
+        language=args.language or default_language(country),
     ))
 
     print(f"\n  Topic        : {report.topic}  (core: {report.core})")
@@ -215,8 +224,10 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("keyword")
     a.add_argument("--url", help="Your target URL to grade against the SERP.")
     a.add_argument("--country", default=None, help="Google country code (us, au, gb, ...).")
-    a.add_argument("--language", default="en")
+    a.add_argument("--language", default=None, help="Language code (defaults to the selected market; explicit overrides supported).")
     a.add_argument("--pages", type=int, default=None, help="How many ranking pages to analyze.")
+    a.add_argument("--serp-file", help="Read a saved Serp JSON snapshot instead of calling a SERP provider.")
+    a.add_argument("--no-store", action="store_true", help="Write the HTML report without PostgreSQL persistence.")
     a.add_argument("--authority", action="store_true", help="Pull backlink/authority factors (needs an authority API key).")
     a.add_argument("--backlinks", action="store_true", help="Pull page/domain backlink power + a target link-quality panel.")
     a.add_argument("--brand", action="store_true", help="Pull branded search volume as a brand-demand factor + panel.")
@@ -224,6 +235,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="LLM entity/EAV discovery + the top-N topical entity comparison table (on by default; --no-entities to skip).")
     a.add_argument("--no-funnel", action="store_true",
                    help="Skip ranking-funnel panels (semantic/intent/quality/engagement/CrUX).")
+    a.add_argument("--no-topical", action="store_true", help="Skip sitemap and site: topical-authority queries.")
     a.add_argument("--no-ai", action="store_true", help="Skip the AI narrative.")
     a.add_argument("--open", action="store_true", help="Open the HTML report in a browser.")
     a.set_defaults(func=cmd_analyze)
@@ -233,7 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--date", required=True, help="Rollout start date (YYYY-MM-DD) = the 'before' cutoff.")
     c.add_argument("--name", default=None, help="Update name, e.g. 'May 2026 Core Update'.")
     c.add_argument("--country", default=None)
-    c.add_argument("--language", default="en")
+    c.add_argument("--language", default=None, help="Language code (defaults to the selected market; explicit overrides supported).")
     c.add_argument("--depth", type=int, default=20)
     c.add_argument("--no-authority", action="store_true", help="Skip authority/traffic join.")
     c.add_argument("--no-ai", action="store_true")
@@ -245,6 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--topic", default=None, help="Topic to score. Defaults to the --url slug, else the domain name.")
     t.add_argument("--url", default=None, help="A specific page to check the cluster supports.")
     t.add_argument("--country", default=None, help="Google country code for the site: query (us, au, gb, ...).")
+    t.add_argument("--language", default=None)
     t.add_argument("--no-ai", action="store_true", help="Skip the AI verdict narrative.")
     t.add_argument("--json", action="store_true", help="Also write the full report JSON to data/reports/.")
     t.set_defaults(func=cmd_topical)

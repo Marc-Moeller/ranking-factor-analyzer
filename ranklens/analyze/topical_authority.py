@@ -30,6 +30,7 @@ from urllib.parse import urlsplit
 
 from ranklens.clients import llm
 from ranklens.clients.serp import fetch_serp
+from ranklens.language import normalize_text, stopwords, tokens
 from ranklens.clients.sitemap import fetch_inventory
 from ranklens.config import Settings, get_settings
 from ranklens.models import TopicalAuthorityReport, TopicalPage
@@ -45,18 +46,17 @@ _STOP = {
     "the", "a", "an", "and", "or", "of", "to", "in", "for", "on", "with", "at",
     "by", "from", "is", "it", "as", "your", "you", "best", "top", "near", "me",
 }
-_WORD_RE = re.compile(r"[a-z0-9]+")
 _JSON_OBJ_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 # --------------------------------------------------------------------------- #
 # Term matching — slug/title text vs the variation set, stem-aware
 # --------------------------------------------------------------------------- #
-def _content_tokens(text: str) -> list[str]:
-    return [t for t in _WORD_RE.findall(text.lower()) if t not in _STOP and len(t) > 2]
+def _content_tokens(text: str, language: str = "en") -> list[str]:
+    return [t for t in tokens(text) if t not in stopwords(language, _STOP) and len(t) > 2]
 
 
-def _term_pattern(term: str) -> re.Pattern | None:
+def _term_pattern(term: str, language: str = "en") -> re.Pattern | None:
     """A stem-aware regex for one variation.
 
     Multi-word terms become an ordered sequence with flexible separators
@@ -65,7 +65,7 @@ def _term_pattern(term: str) -> re.Pattern | None:
     so we don't miss morphological variants. Returns ``None`` for an all-stopword
     term.
     """
-    toks = _content_tokens(term)
+    toks = _content_tokens(term, language)
     if not toks:
         return None
     # \bimplant\w*  (stem prefix), joined by 1-3 non-word chars / short glue words.
@@ -113,23 +113,23 @@ def _norm_url(url: str) -> str:
 class _Matcher:
     """Compiled term set: which core/variation/adjacent terms a text hits."""
 
-    def __init__(self, core_terms: list[str], adjacent_terms: list[str]) -> None:
-        self.core = [(t, p) for t in core_terms if (p := _term_pattern(t))]
-        self.adjacent = [(t, p) for t in adjacent_terms if (p := _term_pattern(t))]
+    def __init__(self, core_terms: list[str], adjacent_terms: list[str], language: str = "en") -> None:
+        self.core = [(t, p) for t in core_terms if (p := _term_pattern(t, language))]
+        self.adjacent = [(t, p) for t in adjacent_terms if (p := _term_pattern(t, language))]
 
     def match_core(self, text: str) -> list[str]:
-        low = text.lower()
+        low = normalize_text(text)
         return [t for t, p in self.core if p.search(low)]
 
     def match_adjacent(self, text: str) -> list[str]:
-        low = text.lower()
+        low = normalize_text(text)
         return [t for t, p in self.adjacent if p.search(low)]
 
 
 # --------------------------------------------------------------------------- #
 # LLM topic expansion (with a deterministic fallback)
 # --------------------------------------------------------------------------- #
-def _fallback_expand(topic: str) -> dict:
+def _fallback_expand(topic: str, language: str = "en") -> dict:
     """Cheap deterministic variation set if the LLM is unavailable.
 
     Deliberately conservative: a multi-word topic keeps the full phrase plus only
@@ -137,7 +137,7 @@ def _fallback_expand(topic: str) -> dict:
     its own ("dental implants" -> phrase + "implants", NOT bare "dental", which
     would over-match every dental page). Single-word topics keep the token.
     """
-    toks = _content_tokens(topic)
+    toks = _content_tokens(topic, language)
     core = " ".join(toks) or topic.strip().lower()
     variations = [core]
     if len(toks) >= 2:
@@ -176,7 +176,7 @@ async def _chat_json(messages: list[dict], settings: Settings, max_tokens: int) 
     return None
 
 
-async def expand_topic(topic: str, settings: Settings) -> dict:
+async def expand_topic(topic: str, settings: Settings, language: str = "en") -> dict:
     """LLM-expand ``topic`` into ``{core, variations[], adjacent[]}``.
 
     ``variations`` are same-topic synonyms / word-stem forms (used for matching +
@@ -188,7 +188,8 @@ async def expand_topic(topic: str, settings: Settings) -> dict:
         "You are an SEO topical-authority analyst. Given a page's core topic, you "
         "produce the cluster of search-term variations, synonyms and word-stem "
         "forms a search engine treats as the SAME topic, plus closely-related "
-        "supporting subtopics."
+        "supporting subtopics. "
+        f"Keep all topic terms in the query language ({language})."
     )
     user = (
         f'Core topic: "{topic}"\n\n'
@@ -210,7 +211,7 @@ async def expand_topic(topic: str, settings: Settings) -> dict:
             max_tokens=1000,
         )
         if not obj:
-            return _fallback_expand(topic)
+            return _fallback_expand(topic, language)
         core = (obj.get("core") or topic).strip()
         variations = [str(v).strip() for v in (obj.get("variations") or []) if str(v).strip()]
         adjacent = [str(v).strip() for v in (obj.get("adjacent") or []) if str(v).strip()]
@@ -218,10 +219,10 @@ async def expand_topic(topic: str, settings: Settings) -> dict:
         if core and core.lower() not in [v.lower() for v in variations]:
             variations.insert(0, core)
         if not variations:
-            return _fallback_expand(topic)
+            return _fallback_expand(topic, language)
         return {"core": core, "variations": variations, "adjacent": adjacent}
     except Exception:  # noqa: BLE001 — expansion is best-effort
-        return _fallback_expand(topic)
+        return _fallback_expand(topic, language)
 
 
 # --------------------------------------------------------------------------- #
@@ -298,6 +299,7 @@ async def analyze_topical_authority(
     country: str = "us",
     settings: Settings | None = None,
     with_ai: bool = True,
+    language: str = "en",
 ) -> TopicalAuthorityReport:
     """Measure a domain's topical authority for a topic.
 
@@ -322,9 +324,9 @@ async def analyze_topical_authority(
         topic = _topic_from_url(target_url) if target_url else dom.split(".")[0]
 
     # 1) LLM term expansion. ------------------------------------------------- #
-    terms = await expand_topic(topic, settings)
+    terms = await expand_topic(topic, settings, language)
     core, variations, adjacent = terms["core"], terms["variations"], terms["adjacent"]
-    matcher = _Matcher(variations, adjacent)
+    matcher = _Matcher(variations, adjacent, language)
 
     # 2) Sitemap inventory. -------------------------------------------------- #
     try:
@@ -364,7 +366,7 @@ async def analyze_topical_authority(
     serp_query = f"site:{dom} {or_block}".strip()
     serp_hits = 0
     try:
-        serp = await fetch_serp(serp_query, country=country, num=20, settings=settings)
+        serp = await fetch_serp(serp_query, country=country, num=20, settings=settings, language=language)
     except Exception:  # noqa: BLE001 — SERP is one signal
         serp = None
     canonical_norm: str | None = None
